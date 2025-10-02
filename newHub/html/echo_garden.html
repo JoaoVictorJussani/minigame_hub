@@ -159,7 +159,7 @@
 
   <canvas id="game"></canvas>
 
-  <script>
+<script>
 window.ECHO_LEVELS = [
   {
     id: 1,
@@ -196,83 +196,84 @@ window.ECHO_LEVELS = [
   },
   {
     id: 4,
-    name: "Twin Blossoms",
+    name: "Twisted Blossoms",
     grid: [
-      "##########",
-      "#P..B..B.#",
-      "#..OO..OO#",
-      "#..B....G#",
-      "##########"
+      "###########",
+      "#P..B..B..#",
+      "#..O..O.O.#",
+      "#..B..B..G#",
+      "###########"
     ]
   },
   {
     id: 5,
-    name: "Silent Pond",
+    name: "Spiral Garden",
     grid: [
-      "##########",
-      "#P....B..#",
-      "#..OO..OO#",
-      "#B......G#",
-      "##########"
+      "############",
+      "#P..B......#",
+      "#..OO..OO..#",
+      "#..B..B..G.#",
+      "############"
     ]
   },
   {
     id: 6,
-    name: "Sunlit Path",
+    name: "Double Echo",
     grid: [
-      "############",
-      "#P..B....B.#",
-      "#..OO..OO..#",
-      "#..B....G..#",
-      "############"
+      "#############",
+      "#P..B....B..#",
+      "#..OO..OO..O#",
+      "#..B....B..G#",
+      "#############"
     ]
   },
   {
     id: 7,
-    name: "Whispering Trees",
-    grid: [
-      "############",
-      "#P....B.....#",
-      "#..OOO..B..#",
-      "#..B.....G.#",
-      "############"
-    ]
-  },
-  {
-    id: 8,
-    name: "Blooming Steps",
-    grid: [
-      "############",
-      "#P..B..B....#",
-      "#..OO..OO..B#",
-      "#..B.....G..#",
-      "############"
-    ]
-  },
-  {
-    id: 9,
-    name: "Garden Maze",
+    name: "Labyrinth Bloom",
     grid: [
       "##############",
-      "#P..B....B....#",
-      "#..OO..OO..OO.#",
-      "#..B.......G..#",
+      "#P..B..B......#",
+      "#..OO..OO..O..#",
+      "#..B..B......G#",
       "##############"
     ]
   },
   {
-    id: 10,
-    name: "Final Blossom",
+    id: 8,
+    name: "Echo Puzzle",
     grid: [
       "################",
-      "#P..B....B....B#",
-      "#..OO..OO..OO..#",
-      "#..B.........G.#",
+      "#P..B...B....B.#",
+      "#..O..OO..O..OO#",
+      "#..B.....B.....G#",
       "################"
+    ]
+  },
+  {
+    id: 9,
+    name: "Garden Frenzy",
+    grid: [
+      "################",
+      "#P..B...B....B..#",
+      "#..OO..O..OO..O.#",
+      "#..B.....B.....G#",
+      "################"
+    ]
+  },
+  {
+    id: 10,
+    name: "Final Echo",
+    grid: [
+      "##################",
+      "#P..B...B....B...#",
+      "#..OO..O..OO..O..#",
+      "#..B.......B....G#",
+      "##################"
     ]
   }
 ];
 </script>
+
 
   <script>
     // inlined main script
@@ -371,18 +372,29 @@ window.ECHO_LEVELS = [
       }
 
       function checkWin() {
-        const gpos = findTiles('G');
-        if (gpos.some(p => p.x === state.player.x && p.y === state.player.y)) {
-          const pads = findTiles('B');
-          let padsSatisfied = pads.length === 0;
-          if (!padsSatisfied) {
+    const gpos = findTiles('G');
+    if (gpos.some(p => p.x === state.player.x && p.y === state.player.y)) {
+        const pads = findTiles('B');
+        let padsSatisfied = pads.length === 0;
+        if (!padsSatisfied) {
             padsSatisfied = pads.every(p => state.boxes.some(b => b.x === p.x && b.y === p.y) || state.echoes.some(e => e.active && e.current && e.current.x === p.x && e.current.y === p.y));
-          }
-          if (padsSatisfied) {
-            setTimeout(() => { alert('You helped the garden bloom 🌸 — Next level!'); loadLevel(idx + 1); }, 80);
-          }
         }
-      }
+        if (padsSatisfied) {
+            setTimeout(() => {
+                alert('Tu as aidé le jardin a fleurir 🌸 — Prochain niveau!');
+                
+                // Se for o último nível, volta pro hub
+                if (idx === levels.length - 1) {
+                    loadLevel(0); // volta pro nível 1 ou hub
+                    alert('De retour au hub!');
+                    window.location.href = 'index.html'; // volta pro hub
+                } else {
+                    loadLevel(idx + 1);
+                }
+            }, 80);
+        }
+    }
+}
 
       function spawnEcho() {
         if (!state) return;
