@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pong — Mini Game</title>
+<style>
+  body {margin:0;display:flex;flex-direction:column;align-items:center;background:#111;color:#fff;font-family:Arial, sans-serif;}
+  h1 {margin-top:20px;text-align:center;}
+  canvas {background:#000;margin-top:20px;border:3px solid #fff;border-radius:8px;}
+  .controls {margin-top:15px;display:flex;gap:10px;}
+  button {padding:10px 15px;font-weight:bold;border:none;border-radius:8px;cursor:pointer;background-color:#2e8b57;color:white;font-size:16px;}
+  button:hover {background-color:#246b46;}
+  button.pause {background-color:#ffb800;}
+  button.pause:hover {background-color:#e0a100;}
+</style>
+</head>
+<body>
+
+<h1>Pong — Use ↑ ↓ (Jogador 1) / W S (Jogador 2)</h1>
+<canvas id="pong" width="800" height="500"></canvas>
+
+<div class="controls">
+  <button id="pauseBtn" class="pause">⏸ Pausar</button>
+  <button onclick="voltarHub()">⬅ Voltar ao Hub</button>
+</div>
+
+<script>
+    const keys = { w:false, s:false, up:false, down:false };
+
+// pegar modo da URL
+const urlParams = new URLSearchParams(window.location.search);
+const modo = urlParams.get('modo') || 'ai'; // padrão vs AI
+
+const canvas = document.getElementById("pong");
+const ctx = canvas.getContext("2d");
+
+// bola
+let ball = { x: canvas.width/2, y: canvas.height/2, radius: 10, speed: 5, dx: 5, dy: 5 };
+
+// raquetes
+const paddleWidth = 12, paddleHeight = 100;
+let player1 = { x: 10, y: canvas.height/2 - paddleHeight/2, score: 0 };
+let player2 = { x: canvas.width - paddleWidth - 10, y: canvas.height/2 - paddleHeight/2, score: 0 };
+
+let paused = false;
+const maxScore = 10; // ponto de vitória
+
+function drawRect(x,y,w,h,color){ ctx.fillStyle=color; ctx.fillRect(x,y,w,h); }
+function drawCircle(x,y,r,color){ ctx.fillStyle=color; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.closePath(); ctx.fill(); }
+function drawText(text,x,y,color){ ctx.fillStyle=color; ctx.font="32px Arial"; ctx.fillText(text,x,y); }
+
+function resetBall(){ ball.x = canvas.width/2; ball.y = canvas.height/2; ball.dx = -ball.dx; ball.speed = 5; }
+
+function collision(b,p){
+  p.top = p.y; p.bottom = p.y + paddleHeight;
+  p.left = p.x; p.right = p.x + paddleWidth;
+  return b.x - b.radius < p.right && b.x + b.radius > p.left &&
+         b.y - b.radius < p.bottom && b.y + b.radius > p.top;
+}
+
+function checkWin(){
+  if(player1.score >= maxScore){ alert("🏆 Jogador 1 venceu!"); location.reload(); }
+  if(player2.score >= maxScore){ 
+    if(modo === 'ai'){ alert("💀 AI venceu!"); } else { alert("🏆 Jogador 2 venceu!"); }
+    location.reload(); 
+  }
+}
+
+function update(){
+  if(paused) return;
+
+  ball.x += ball.dx;
+  ball.y += ball.dy;
+
+  if(ball.y - ball.radius < 0 || ball.y + ball.radius > canvas.height) ball.dy = -ball.dy;
+
+  // colisão raquetes
+  let currentPaddle = (ball.x < canvas.width/2) ? player1 : player2;
+  if(collision(ball, currentPaddle)){
+    let collidePoint = (ball.y - (currentPaddle.y + paddleHeight/2)) / (paddleHeight/2);
+    let angleRad = (Math.PI/4) * collidePoint;
+    let direction = (ball.x < canvas.width/2) ? 1 : -1;
+    ball.dx = direction * ball.speed * Math.cos(angleRad);
+    ball.dy = ball.speed * Math.sin(angleRad);
+    ball.speed += 0.5;
+  }
+
+  // pontos
+  if(ball.x - ball.radius < 0){ player2.score++; resetBall(); checkWin(); }
+  else if(ball.x + ball.radius > canvas.width){ player1.score++; resetBall(); checkWin(); }
+
+  // movimento do player2
+  if(modo === 'ai'){ // IA
+    player2.y += ((ball.y - (player2.y + paddleHeight/2)) * 0.09);
+  }
+
+  // travar raquetes dentro do canvas
+  if(player1.y < 0) player1.y = 0;
+  if(player1.y + paddleHeight > canvas.height) player1.y = canvas.height - paddleHeight;
+  if(player2.y < 0) player2.y = 0;
+  if(player2.y + paddleHeight > canvas.height) player2.y = canvas.height - paddleHeight;
+}
+
+function render(){
+  drawRect(0,0,canvas.width,canvas.height,"#000");
+  drawText(player1.score, canvas.width/4, 50, "#fff");
+  drawText(player2.score, 3*canvas.width/4, 50, "#fff");
+  drawRect(player1.x, player1.y, paddleWidth, paddleHeight, "#fff");
+  drawRect(player2.x, player2.y, paddleWidth, paddleHeight, "#fff");
+  drawCircle(ball.x, ball.y, ball.radius, "#fff");
+  for(let i=0;i<canvas.height;i+=20) drawRect(canvas.width/2-1,i,2,10,"#fff");
+}
+
+function gameLoop(){ update(); render(); requestAnimationFrame(gameLoop); }
+
+// controles
+window.addEventListener("keydown", e=>{
+  // Player 1 (W/S)
+  if(e.key === "w" || e.key === "W") player1.y -= 35;
+  if(e.key === "s" || e.key === "S") player1.y += 35;
+
+  // Player 2 (↑/↓) — só se 2 jogadores
+  if(modo === '2p'){
+    if(e.key === "ArrowUp") player2.y -= 35;
+    if(e.key === "ArrowDown") player2.y += 35;
+  }
+});
+
+// pause
+document.getElementById("pauseBtn").addEventListener("click", ()=>{
+  paused = !paused;
+  document.getElementById("pauseBtn").textContent = paused ? "▶ Continuar" : "⏸ Pausar";
+});
+
+// voltar ao hub
+function voltarHub(){ window.location.href='index.html'; }
+
+gameLoop();
+</script>
+
+</body>
+</html>

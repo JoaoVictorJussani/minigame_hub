@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Echo Garden — standalone</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --card: #0f1724;
+      --accent: #59d3c5;
+      --muted: #95a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: Inter, ui-sans-serif, system-ui, Segoe UI, Roboto, Arial;
+      margin: 0;
+      padding: 0
+    }
+
+    html,
+    body {
+      height: 100%
+    }
+
+    body {
+      background: linear-gradient(180deg, #071021 0%, #071527 60%);
+      color: #e6f0f4;
+      display: grid;
+      place-items: center;
+      padding: 24px
+    }
+
+    #ui {
+      position: fixed;
+      left: 24px;
+      top: 24px;
+      max-width: 360px
+    }
+
+    #ui h1 {
+      font-size: 20px;
+      margin-bottom: 6px;
+      letter-spacing: 0.6px
+    }
+
+    #ui #info {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 8px
+    }
+
+    #levelInfo {
+      margin: 8px 0;
+      color: var(--accent);
+      font-weight: 600
+    }
+
+    #controls {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 6px
+    }
+
+    #controls button {
+      background: linear-gradient(180deg, #172433, #0f1b2a);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      color: #dff7f2;
+      padding: 8px 10px;
+      border-radius: 8px;
+      cursor: pointer
+    }
+
+    #controls button:active {
+      transform: translateY(1px)
+    }
+
+    #footer {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 8px
+    }
+
+    #echoHelp {
+      margin-top: 10px;
+      color: #cfeee7;
+      font-size: 13px
+    }
+
+    #speedControl {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      display: flex;
+      gap: 8px;
+      align-items: center
+    }
+
+    #speedRange {
+      width: 140px
+    }
+
+    #game {
+      width: min(88vmin, 900px);
+      height: calc(min(88vmin, 900px));
+      background: linear-gradient(180deg, rgba(12, 18, 30, 0.6), rgba(6, 10, 18, 0.6));
+      box-shadow: 0 8px 30px rgba(2, 8, 20, 0.7);
+      border-radius: 14px;
+      will-change: transform
+    }
+
+    .hud {
+      position: absolute;
+      right: 24px;
+      top: 24px;
+      color: var(--muted)
+    }
+
+    /* accessibility: focus styles */
+    button:focus {
+      outline: 2px solid rgba(89, 211, 197, 0.18);
+      outline-offset: 2px
+    }
+
+    @media (max-width:700px) {
+      #ui {
+        position: static;
+        transform: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center
+      }
+
+      body {
+        padding: 12px
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="ui">
+    <h1>Echo Garden ❤</h1>
+    <div id="info">Move: WASD / Arrows · Spawn Echo: E · Undo Echo: Q · Restart: R</div>
+    <div id="levelInfo"></div>
+    <div id="controls">
+      <button id="prev">◀ Prev</button>
+      <button id="next">Next ▶</button>
+      <button id="restart">Restart</button>
+    </div>
+    <div id="echoHelp">Echo: record your walk, then press <strong>E</strong> to spawn an echo that replays the exact
+      path. Use echoes to step on multiple pads or mimic your actions simultaneously.</div>
+    <div id="speedControl">Echo speed: <input id="speedRange" type="range" min="100" max="600" step="50" value="300" />
+      <span id="speedVal">300ms</span></div>
+    <div id="footer">Tip: Record your path then spawn echoes to press multiple pads at once.</div>
+  </div>
+
+  <canvas id="game"></canvas>
+
+  <script>
+window.ECHO_LEVELS = [
+  {
+    id: 1,
+    name: "First Bloom",
+    grid: [
+      "########",
+      "#P..B..#",
+      "#..OO..#",
+      "#..B.G.#",
+      "########"
+    ]
+  },
+  {
+    id: 2,
+    name: "Mirror Grove",
+    grid: [
+      "##########",
+      "#P..B....#",
+      "#..OOO.B.#",
+      "#..B...G.#",
+      "##########"
+    ]
+  },
+  {
+    id: 3,
+    name: "Echo Bridge",
+    grid: [
+      "############",
+      "#P....B.....#",
+      "#..OO..OO.B.#",
+      "#..B...G....#",
+      "############"
+    ]
+  },
+  {
+    id: 4,
+    name: "Twin Blossoms",
+    grid: [
+      "##########",
+      "#P..B..B.#",
+      "#..OO..OO#",
+      "#..B....G#",
+      "##########"
+    ]
+  },
+  {
+    id: 5,
+    name: "Silent Pond",
+    grid: [
+      "##########",
+      "#P....B..#",
+      "#..OO..OO#",
+      "#B......G#",
+      "##########"
+    ]
+  },
+  {
+    id: 6,
+    name: "Sunlit Path",
+    grid: [
+      "############",
+      "#P..B....B.#",
+      "#..OO..OO..#",
+      "#..B....G..#",
+      "############"
+    ]
+  },
+  {
+    id: 7,
+    name: "Whispering Trees",
+    grid: [
+      "############",
+      "#P....B.....#",
+      "#..OOO..B..#",
+      "#..B.....G.#",
+      "############"
+    ]
+  },
+  {
+    id: 8,
+    name: "Blooming Steps",
+    grid: [
+      "############",
+      "#P..B..B....#",
+      "#..OO..OO..B#",
+      "#..B.....G..#",
+      "############"
+    ]
+  },
+  {
+    id: 9,
+    name: "Garden Maze",
+    grid: [
+      "##############",
+      "#P..B....B....#",
+      "#..OO..OO..OO.#",
+      "#..B.......G..#",
+      "##############"
+    ]
+  },
+  {
+    id: 10,
+    name: "Final Blossom",
+    grid: [
+      "################",
+      "#P..B....B....B#",
+      "#..OO..OO..OO..#",
+      "#..B.........G.#",
+      "################"
+    ]
+  }
+];
+</script>
+
+  <script>
+    // inlined main script
+    (function () {
+      const canvas = document.getElementById('game');
+      const ctx = canvas.getContext('2d');
+      const DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+      // UI
+      const levelInfo = document.getElementById('levelInfo');
+      const prevBtn = document.getElementById('prev');
+      const nextBtn = document.getElementById('next');
+      const restartBtn = document.getElementById('restart');
+
+      let levels = window.ECHO_LEVELS || [];
+      let idx = 0;
+
+      // Game state
+      let state = null;
+      let needsRedraw = true;
+
+      function resize() {
+        const size = Math.min(window.innerWidth - 80, window.innerHeight - 80, 720);
+        canvas.style.width = size + 'px';
+        canvas.style.height = size + 'px';
+        canvas.width = Math.floor(size * DPR);
+        canvas.height = Math.floor(size * DPR);
+        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+        needsRedraw = true;
+      }
+      window.addEventListener('resize', resize);
+
+      function parseGrid(level) {
+        const grid = level.grid.map(r => r.split(''));
+        const h = grid.length, w = grid[0].length;
+        let player = { x: 0, y: 0 };
+        let boxes = [];
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          const c = grid[y][x];
+          if (c === 'P') { player = { x, y }; grid[y][x] = '.' }
+          if (c === 'O') { boxes.push({ x, y }); grid[y][x] = '.' }
+        }
+        return { grid, w, h, player, boxes };
+      }
+
+      function loadLevel(i) {
+        idx = (i + levels.length) % levels.length;
+        const lvl = levels[idx];
+        state = parseGrid(lvl);
+        state.levelName = lvl.name;
+        state.record = [];
+        state.isRecording = true;
+        state.echoes = [];
+        state.tick = 0;
+        state.history = [];
+        levelInfo.textContent = `${lvl.name} — ${idx + 1}/${levels.length}`;
+        needsRedraw = true;
+      }
+
+      function tileAt(grid, x, y) {
+        if (y < 0 || x < 0 || y >= grid.h || x >= grid.w) return '#';
+        return grid.grid[y][x];
+      }
+
+      function isFree(x, y, boxes) {
+        if (tileAt(state, x, y) === '#') return false;
+        for (const b of boxes) if (b.x === x && b.y === y) return false;
+        return true;
+      }
+
+      function movePlayer(dx, dy) {
+        if (!state) return;
+        const px = state.player.x, py = state.player.y;
+        const nx = px + dx, ny = py + dy;
+        const boxIdx = state.boxes.findIndex(b => b.x === nx && b.y === ny);
+        if (boxIdx >= 0) {
+          const bx = nx + dx, by = ny + dy;
+          if (!isFree(bx, by, state.boxes)) return;
+          state.history.push({ type: 'push', boxIdx, from: { x: state.boxes[boxIdx].x, y: state.boxes[boxIdx].y }, to: { x: bx, y: by }, playerFrom: { x: state.player.x, y: state.player.y } });
+          state.boxes[boxIdx].x = bx; state.boxes[boxIdx].y = by;
+          state.player.x = nx; state.player.y = ny;
+        } else {
+          if (!isFree(nx, ny, state.boxes)) return;
+          state.history.push({ type: 'move', from: { x: state.player.x, y: state.player.y }, to: { x: nx, y: ny } });
+          state.player.x = nx; state.player.y = ny;
+        }
+        if (state.isRecording) { state.record.push({ x: state.player.x, y: state.player.y }); }
+        needsRedraw = true;
+        checkWin();
+      }
+
+      function findTiles(ch) {
+        const out = [];
+        for (let y = 0; y < state.h; y++) for (let x = 0; x < state.w; x++) if (state.grid[y][x] === ch) out.push({ x, y });
+        return out;
+      }
+
+      function checkWin() {
+        const gpos = findTiles('G');
+        if (gpos.some(p => p.x === state.player.x && p.y === state.player.y)) {
+          const pads = findTiles('B');
+          let padsSatisfied = pads.length === 0;
+          if (!padsSatisfied) {
+            padsSatisfied = pads.every(p => state.boxes.some(b => b.x === p.x && b.y === p.y) || state.echoes.some(e => e.active && e.current && e.current.x === p.x && e.current.y === p.y));
+          }
+          if (padsSatisfied) {
+            setTimeout(() => { alert('You helped the garden bloom 🌸 — Next level!'); loadLevel(idx + 1); }, 80);
+          }
+        }
+      }
+
+      function spawnEcho() {
+        if (!state) return;
+        if (state.record.length === 0) return;
+        const path = state.record.slice();
+        state.echoes.push({ path, idx: 0, active: true, current: null, elapsed: 0 });
+        state.isRecording = false;
+        needsRedraw = true;
+      }
+
+      function undoEcho() {
+        if (!state) return;
+        state.echoes.pop();
+        if (state.echoes.length === 0) state.isRecording = true;
+        needsRedraw = true;
+      }
+
+      let echoSpeed = 300;
+      let lastTick = performance.now();
+      function tickLoop(now) {
+        if (!state) return;
+        const delta = now - lastTick;
+        let advanced = false;
+        for (const e of state.echoes) {
+          if (!e.active) continue;
+          e.elapsed += delta;
+          while (e.elapsed >= echoSpeed) {
+            e.elapsed -= echoSpeed;
+            if (e.idx >= e.path.length) { e.active = false; e.current = null; break; }
+            const pos = e.path[e.idx]; e.current = { x: pos.x, y: pos.y }; e.idx++;
+            advanced = true;
+          }
+        }
+        lastTick = now;
+        if (advanced) { needsRedraw = true; checkWin(); }
+        if (needsRedraw) { draw(); needsRedraw = false; }
+        requestAnimationFrame(tickLoop);
+      }
+
+      document.addEventListener('keydown', (ev) => {
+        const k = ev.key.toLowerCase();
+        if (['arrowup', 'w'].includes(ev.key.toLowerCase()) || k === 'w') { movePlayer(0, -1); ev.preventDefault(); }
+        if (['arrowdown', 's'].includes(ev.key.toLowerCase()) || k === 's') { movePlayer(0, 1); ev.preventDefault(); }
+        if (['arrowleft', 'a'].includes(ev.key.toLowerCase()) || k === 'a') { movePlayer(-1, 0); ev.preventDefault(); }
+        if (['arrowright', 'd'].includes(ev.key.toLowerCase()) || k === 'd') { movePlayer(1, 0); ev.preventDefault(); }
+        if (k === 'e') { spawnEcho(); }
+        if (k === 'q') { undoEcho(); }
+        if (k === 'r') { loadLevel(idx); }
+      });
+
+      prevBtn.addEventListener('click', () => loadLevel(idx - 1));
+      nextBtn.addEventListener('click', () => loadLevel(idx + 1));
+      restartBtn.addEventListener('click', () => loadLevel(idx));
+
+      const speedRange = document.getElementById('speedRange');
+      const speedVal = document.getElementById('speedVal');
+      if (speedRange) {
+        speedRange.addEventListener('input', () => {
+          echoSpeed = Number(speedRange.value);
+          speedVal.textContent = echoSpeed + 'ms';
+        });
+      }
+
+      requestAnimationFrame((now) => { lastTick = now; tickLoop(now); });
+
+      function draw() {
+        if (!state) return;
+        const cw = canvas.clientWidth, ch = canvas.clientHeight;
+        ctx.clearRect(0, 0, cw, ch);
+        const pad = 18;
+        const gw = state.w, gh = state.h;
+        const cell = Math.floor((Math.min(cw, ch) - pad * 2) / Math.max(gw, gh));
+        const ox = (cw - cell * gw) / 2, oy = (ch - cell * gh) / 2;
+
+        ctx.fillStyle = '#071122';
+        roundRect(ctx, ox - 6, oy - 6, cell * gw + 12, cell * gh + 12, 10);
+        ctx.fill();
+
+        for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) {
+          const t = state.grid[y][x];
+          const tx = ox + x * cell, ty = oy + y * cell;
+          ctx.fillStyle = '#0b1a2a';
+          roundRect(ctx, tx + 4, ty + 4, cell - 8, cell - 8, 6);
+          ctx.fill();
+          if (t === '#') {
+            ctx.fillStyle = '#0b2536'; roundRect(ctx, tx + 2, ty + 2, cell - 4, cell - 4, 6); ctx.fill();
+          }
+          if (t === 'G') {
+            ctx.fillStyle = '#0b2536'; roundRect(ctx, tx + 2, ty + 2, cell - 4, cell - 4, 6); ctx.fill();
+            drawFlower(ctx, tx + cell / 2, ty + cell / 2, cell * 0.22);
+          }
+          if (t === 'B') {
+            ctx.fillStyle = '#092e2b'; roundRect(ctx, tx + 6, ty + cell * 0.6, cell - 12, cell * 0.22, 6); ctx.fill();
+            ctx.strokeStyle = 'rgba(89,211,197,0.18)'; ctx.stroke();
+          }
+        }
+
+        if (state.record && state.record.length > 0) {
+          ctx.strokeStyle = 'rgba(89,211,197,0.22)'; ctx.lineWidth = 3;
+          ctx.beginPath();
+          for (let i = 0; i < state.record.length; i++) {
+            const p = state.record[i];
+            const x = ox + p.x * cell + cell / 2, y = oy + p.y * cell + cell / 2;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        }
+
+        for (const b of state.boxes) {
+          const tx = ox + b.x * cell, ty = oy + b.y * cell;
+          ctx.fillStyle = '#8c6b4f'; roundRect(ctx, tx + 8, ty + 8, cell - 16, cell - 16, 6); ctx.fill();
+          ctx.fillStyle = 'rgba(0,0,0,0.12)'; roundRect(ctx, tx + 8, ty + 8, cell - 16, cell - 16, 6); ctx.fill();
+        }
+
+        for (const e of state.echoes) {
+          if (!e.active || !e.current) continue;
+          const tx = ox + e.current.x * cell, ty = oy + e.current.y * cell;
+          const grad = ctx.createRadialGradient(tx + cell / 2, ty + cell / 2, 1, tx + cell / 2, ty + cell / 2, cell * 1.2);
+          grad.addColorStop(0, 'rgba(89,211,197,0.22)'); grad.addColorStop(1, 'rgba(89,211,197,0.02)');
+          ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(tx + cell / 2, ty + cell / 2, cell * 0.9, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = 'rgba(89,211,197,0.9)'; ctx.beginPath(); ctx.arc(tx + cell / 2, ty + cell / 2, cell * 0.14, 0, Math.PI * 2); ctx.fill();
+        }
+
+        const ptx = ox + state.player.x * cell, pty = oy + state.player.y * cell;
+        ctx.fillStyle = 'rgba(89,211,197,0.98)'; roundRect(ctx, ptx + 6, pty + 6, cell - 12, cell - 12, 8); ctx.fill();
+        ctx.fillStyle = 'rgba(0,0,0,0.08)'; roundRect(ctx, ptx + 6, pty + 6, cell - 12, cell - 12, 8); ctx.fill();
+
+        ctx.fillStyle = 'rgba(255,255,255,0.86)'; ctx.font = '14px system-ui';
+        ctx.fillText(state.levelName, 14, 22);
+        ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '12px system-ui';
+        ctx.fillText('Recorded steps: ' + state.record.length + ' · Echoes active: ' + state.echoes.filter(e => e.active).length + ' · Echo speed: ' + echoSpeed + 'ms', 14, 40);
+      }
+
+      function roundRect(ctx, x, y, w, h, r) {
+        ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+      }
+
+      function drawFlower(ctx, cx, cy, r) {
+        ctx.save();
+        for (let i = 0; i < 4; i++) {
+          ctx.beginPath(); ctx.fillStyle = '#ffd6f0';
+          ctx.ellipse(cx + Math.cos(i * Math.PI / 2) * r * 0.6, cy + Math.sin(i * Math.PI / 2) * r * 0.6, r, r * 0.6, i * Math.PI / 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.beginPath(); ctx.fillStyle = '#ffba63'; ctx.arc(cx, cy, r * 0.45, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+
+      resize();
+      if (levels.length > 0) loadLevel(0);
+      else { levelInfo.textContent = 'No levels found'; }
+    })();
+  </script>
+</body>
+
+</html>

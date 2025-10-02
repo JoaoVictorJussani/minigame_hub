@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Flappy — Mini Game</title>
+<style>
+  :root{
+    --bg1: #70c5ce;
+    --ground: #dcae6a;
+    --pipe: #3aa35a;
+    --bird: #ffd34d;
+  }
+  html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif;background:linear-gradient(#87e0fd,#70c5ce);}
+  header{width:100%;padding:16px 0;text-align:center;font-weight:700;color:#033; background:rgba(255,255,255,0.08);box-shadow:0 2px 8px rgba(0,0,0,0.12)}
+  #wrap{display:flex;flex-direction:column;align-items:center;padding:16px;}
+  canvas{background:linear-gradient(#87e0fd,#70c5ce);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.18);display:block}
+  .controls{margin-top:12px;display:flex;gap:10px;align-items:center}
+  button, .hint { background:#2e8b57;color:white;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700; }
+  .hint{background:transparent;color:#033;font-weight:600}
+  .scoreboard{margin-top:10px;color:#033;font-size:18px;font-weight:700}
+  /* responsividade */
+  @media (max-width:480px){
+    canvas{width:340px;height:600px}
+  }
+</style>
+</head>
+<body>
+<header>🐦 Flappy — Segura a barra e passa nos canos!</header>
+
+<div id="wrap">
+  <canvas id="c" width="480" height="640"></canvas>
+
+  <div class="controls">
+    <button id="startBtn">Jogar</button>
+    <button id="restartBtn" style="display:none">Reiniciar</button>
+    <button onclick="voltarMenu()">⬅ Voltar ao Hub</button>
+    <div class="hint">Use Espaço / Clique / Toque pra bater</div>
+  </div>
+
+  <div class="scoreboard">
+    Pontuação: <span id="score">0</span> — Melhor: <span id="best">0</span>
+  </div>
+</div>
+
+<script>
+  function voltarMenu() { window.location.href = "index.html"; }
+</script>
+
+<script>
+(function(){
+
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const startBtn = document.getElementById('startBtn');
+  const restartBtn = document.getElementById('restartBtn');
+  const scoreEl = document.getElementById('score');
+  const bestEl = document.getElementById('best');
+  const STORAGE_KEY = 'flappy_best_v1';
+  let best = parseInt(localStorage.getItem(STORAGE_KEY) || '0',10);
+  bestEl.textContent = best;
+
+  // configurações
+  const W = canvas.width, H = canvas.height;
+  const GRAVITY = 0.5;
+  const FLAP = -9.2;
+  const PIPE_GAP = 150;
+  const PIPE_W = 80;
+  const PIPE_SPEED = 2.6;
+  const SPAWN_INTERVAL = 1400; // ms
+
+  let bird, pipes, lastSpawn, score, running, af;
+
+  function resetGame(){
+    bird = { x: W*0.2, y: H/2, r: 18, vy:0, rot:0 };
+    pipes = [];
+    lastSpawn = 0;
+    score = 0;
+    running = false;
+    scoreEl.textContent = score;
+    restartBtn.style.display = 'none';
+    startBtn.style.display = 'inline-block';
+  }
+
+  function spawnPipe(){
+    const topH = 80 + Math.random()*(H/2 - 200);
+    pipes.push({ x: W, top: topH, passed:false });
+  }
+
+function flap(){
+  if (!running) return; // não deixa bater asa se não estiver jogando
+  bird.vy = FLAP;
+}
+
+
+  function update(dt){
+    // bird physics
+    bird.vy += GRAVITY;
+    bird.y += bird.vy;
+    bird.rot = Math.max(Math.min(bird.vy/12, 0.8), -1.0);
+
+    // ground & ceiling
+    if(bird.y + bird.r > H - 48){
+      bird.y = H - 48 - bird.r;
+      gameOver();
+    }
+    if(bird.y - bird.r < 0){
+      bird.y = bird.r;
+      bird.vy = 0;
+    }
+
+    // pipes movement
+    for(let i = pipes.length-1; i>=0; i--){
+      const p = pipes[i];
+      p.x -= PIPE_SPEED;
+      // check scoring
+      if(!p.passed && p.x + PIPE_W < bird.x){
+        p.passed = true;
+        score++;
+        scoreEl.textContent = score;
+        if(score > best){ best = score; localStorage.setItem(STORAGE_KEY,best); bestEl.textContent = best; }
+      }
+      // remove off-screen
+      if(p.x + PIPE_W < -50) pipes.splice(i,1);
+      // collision detection: bird vs top pipe and bottom pipe rects
+      const bx = bird.x, by = bird.y, r = bird.r;
+      // top pipe rect
+      const topRect = { x:p.x, y:0, w:PIPE_W, h:p.top };
+      const botRect = { x:p.x, y:p.top + PIPE_GAP, w:PIPE_W, h:H - (p.top + PIPE_GAP) - 48 };
+      if(collideCircleRect(bx,by,r, topRect) || collideCircleRect(bx,by,r, botRect)){
+        gameOver();
+      }
+    }
+  }
+
+  function collideCircleRect(cx,cy,r, rect){
+    // find closest point
+    let closestX = clamp(cx, rect.x, rect.x + rect.w);
+    let closestY = clamp(cy, rect.y, rect.y + rect.h);
+    let dx = cx - closestX, dy = cy - closestY;
+    return (dx*dx + dy*dy) <= r*r;
+  }
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+  function gameOver(){
+    running = false;
+    cancelAnimationFrame(af);
+    af = null;
+    // show message
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(30, H/2-60, W-60, 120);
+    ctx.fillStyle = '#fff';
+    ctx.font = '28px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('💥 Game Over!', W/2, H/2 - 10);
+    ctx.font = '18px Arial';
+    ctx.fillText('Clique em Reiniciar ou pressione Espaço', W/2, H/2 + 22);
+  }
+
+  function draw(){
+    // sky background
+    ctx.clearRect(0,0,W,H);
+    // gradient sky (already background but draw subtle cloud)
+    // ground
+    ctx.fillStyle = 'rgba(220,174,106,0.95)';
+    ctx.fillRect(0, H-48, W, 48);
+
+    // pipes
+    for(const p of pipes){
+      // top pipe
+      ctx.fillStyle = '#2e8b57';
+      roundRect(ctx, p.x, 0, PIPE_W, p.top, 8, true, false);
+      // bottom pipe
+      roundRect(ctx, p.x, p.top+PIPE_GAP, PIPE_W, H - (p.top+PIPE_GAP) - 48, 8, true, false);
+      // caps
+      ctx.fillStyle = '#1f6b3f';
+      ctx.fillRect(p.x-6, p.top-12, PIPE_W+12, 12);
+      ctx.fillRect(p.x-6, p.top+PIPE_GAP, PIPE_W+12, 12);
+    }
+
+    // bird (simple circle with eye)
+    ctx.save();
+    ctx.translate(bird.x, bird.y);
+    ctx.rotate(bird.rot);
+    // body
+    ctx.fillStyle = '#ffd34d';
+    ctx.beginPath();
+    ctx.ellipse(0,0, bird.r, bird.r*0.85, 0, 0, Math.PI*2);
+    ctx.fill();
+    // wing
+    ctx.fillStyle = '#ffb84d';
+    ctx.beginPath();
+    ctx.ellipse(-6,6,10,6, 0,0,Math.PI*2);
+    ctx.fill();
+    // eye
+    ctx.fillStyle = '#222';
+    ctx.beginPath();
+    ctx.arc(7, -6, 4, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+
+    // score top-left
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fillRect(14,14,88,36);
+    ctx.fillStyle = '#fff';
+    ctx.font = '22px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText('Score: '+score, 22, 40);
+  }
+
+  function roundRect(ctx,x,y,w,h,r,fill,stroke){
+    if(typeof r === 'number') r = {tl:r,tr:r,br:r,bl:r};
+    ctx.beginPath();
+    ctx.moveTo(x+r.tl,y);
+    ctx.lineTo(x+w-r.tr,y);
+    ctx.quadraticCurveTo(x+w,y,x+w,y+r.tr);
+    ctx.lineTo(x+w,y+h-r.br);
+    ctx.quadraticCurveTo(x+w,y+h,x+w-r.br,y+h);
+    ctx.lineTo(x+r.bl,y+h);
+    ctx.quadraticCurveTo(x,y+h,x,y+h-r.bl);
+    ctx.lineTo(x,y+r.tl);
+    ctx.quadraticCurveTo(x,y,x+r.tl,y);
+    ctx.closePath();
+    if(fill) ctx.fill();
+    if(stroke) ctx.stroke();
+  }
+
+  // main loop
+  let lastTime = 0;
+  function loop(ts){
+    if(!lastTime) lastTime = ts;
+    const dt = ts - lastTime;
+    lastTime = ts;
+    // spawn logic
+    if(running){
+      if(performance.now() - lastSpawn > SPAWN_INTERVAL){
+        spawnPipe();
+        lastSpawn = performance.now();
+      }
+      update(dt);
+    }
+    draw();
+    af = requestAnimationFrame(loop);
+  }
+
+  // input handlers
+  window.addEventListener('keydown', e=>{
+    if(e.code === 'Space'){ e.preventDefault(); if(!running && !af){ startLoop(); } flap(); }
+    if(e.key === 'r' || e.key === 'R'){ restart(); }
+  });
+  window.addEventListener('mousedown', e=>{ flap(); });
+  window.addEventListener('touchstart', e=>{ e.preventDefault(); flap(); }, {passive:false});
+
+  startBtn.addEventListener('click', ()=>{
+    startLoop();
+    flap();
+  });
+  restartBtn.addEventListener('click', restart);
+
+  function startLoop(){
+    if(af) cancelAnimationFrame(af);
+    lastTime = 0;
+    lastSpawn = performance.now();
+    running = true;
+    startBtn.style.display = 'none';
+    restartBtn.style.display = 'inline-block';
+    af = requestAnimationFrame(loop);
+  }
+
+  function restart(){
+    if(af) cancelAnimationFrame(af);
+    resetGame();
+    draw();
+  }
+
+
+  // init
+  resetGame();
+  draw();
+
+})();
+</script>
+</body>
+</html>

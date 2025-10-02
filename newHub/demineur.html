@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campo Minado</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #d0f7d0, #d0d0ff);
+            color: #222;
+            text-align: center;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: background 0.5s;
+        }
+
+        header {
+            width: 100%;
+            padding: 20px 0;
+            background: linear-gradient(90deg, #d0f7d0, #a0d0ff);
+            box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+            border-radius: 0 0 18px 18px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2.8rem;
+            color: #2e8b57;
+            text-shadow: 1px 1px 6px rgba(0,0,0,0.2);
+        }
+
+        #info-bar {
+            margin: 20px auto;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            font-size: 18px;
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+            padding: 12px 20px;
+            font-weight: 600;
+        }
+
+        #game {
+            display: inline-block;
+            margin: 24px auto;
+            border: 2px solid #333;
+            background: #fff;
+            box-shadow: 0 10px 32px rgba(0,0,0,0.15);
+            border-radius: 20px;
+            padding: 20px 14px 14px 14px;
+            transition: transform 0.2s, box-shadow 0.3s;
+        }
+
+        #game:hover { transform: scale(1.01); }
+
+        .cell {
+            width: 36px;
+            height: 36px;
+            display: inline-block;
+            border-radius: 8px;
+            border: 1.5px solid #888;
+            margin: 4px;
+            vertical-align: top;
+            font-size: 20px;
+            line-height: 36px;
+            cursor: pointer;
+            user-select: none;
+            background: linear-gradient(145deg, #f0f0f0, #d0ffd0);
+            font-weight: 700;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transition: transform 0.2s, background 0.3s, box-shadow 0.3s;
+        }
+
+        .cell:hover:not(.revealed):not(.flagged) {
+            transform: scale(1.1);
+            background: #c0ffc0;
+            box-shadow: 0 6px 20px rgba(46,139,87,0.2);
+        }
+
+        .cell.revealed { background: #b3ffb3; cursor: default; }
+        .cell.mine { background: #ff6666; }
+        .cell.flagged { background: #ffe680; color: #fbc02d; }
+
+        #status {
+            margin: 18px;
+            font-size: 22px;
+            font-weight: bold;
+            border-radius: 12px;
+            padding: 12px 0;
+            min-height: 32px;
+            background: #fff;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+
+        #status.win { background: #d0ffd0; color: #2e8b57; }
+        #status.lose { background: #ffd0d0; color: #c00; }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            background: #2e8b57;
+            color: #fff;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>💣 Campo Minado</h1>
+    </header>
+
+    <main>
+        <div id="info-bar">
+            <span id="timer">⏱️ 60s</span>
+            <span id="flags">🚩 15</span>
+            <span id="wins">🏆 0</span>
+            <span id="losses">💀 0</span>
+            <button id="restart">Reiniciar</button>
+            <select id="difficulty">
+                <option value="easy">Fácil</option>
+                <option value="medium" selected>Médio</option>
+                <option value="hard">Difícil</option>
+                <option value="powerups">Powerups</option>
+            </select>
+        </div>
+
+        <div id="status"></div>
+        <div id="game"></div>
+
+        <button onclick="voltarMenu()" style="margin-top:20px;">⬅ Voltar ao Hub</button>
+    </main>
+    <script>
+        function voltarMenu() { window.location.href = "index.html"; }
+        window.addEventListener('DOMContentLoaded', () => { setDifficulty('medium'); initGame(); });
+        document.getElementById('restart').onclick = function() { setDifficulty(document.getElementById('difficulty').value); initGame(); };
+        document.getElementById('difficulty').onchange = function() { setDifficulty(this.value); initGame(); };
+    </script>
+    <script>
+        // ----- Configuração padrão -----
+let ROWS = 10;
+let COLS = 10;
+let MINES = 15;
+let SPECIAL_MINES = 0;
+let BONUS_CELLS = 0;
+let POWERUPS = false;
+
+let board = [];
+let revealed = [];
+let flagged = [];
+let gameOver = false;
+let timer = 0;
+let timerMax = 60;
+let timerInterval = null;
+let wins = 0;
+let losses = 0;
+let firstClick = true;
+
+// ----- Funções utilitárias -----
+function updateTimerDisplay() {
+    document.getElementById('timer').textContent = `⏱️ ${timer}s`;
+}
+
+function resetTimer() {
+    stopTimer();
+    timer = timerMax;
+    updateTimerDisplay();
+}
+
+function startTimer() {
+    if (timerInterval) return;
+    timerInterval = setInterval(() => {
+        timer--;
+        updateTimerDisplay();
+        if (timer <= 0) {
+            stopTimer();
+            if (!gameOver) loseGame("Tempo esgotado!");
+        }
+    }, 1000);
+}
+
+function stopTimer() {
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = null;
+}
+
+function updateFlags() {
+    let flagsUsed = 0;
+    for (let r = 0; r < ROWS; r++)
+        for (let c = 0; c < COLS; c++)
+            if (flagged[r] && flagged[r][c]) flagsUsed++;
+    const remaining = Math.max(0, MINES + (POWERUPS ? SPECIAL_MINES : 0) - flagsUsed);
+    document.getElementById('flags').textContent = `🚩 ${remaining}`;
+}
+
+function updateWinsLosses() {
+    document.getElementById('wins').textContent = `🏆 ${wins}`;
+    document.getElementById('losses').textContent = `💀 ${losses}`;
+}
+
+// ----- Inicialização do tabuleiro -----
+function initGameArrays() {
+    board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+    revealed = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
+    flagged = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
+}
+
+// ----- Colocação de minas -----
+function placeMines(safeR = null, safeC = null) {
+    let minesPlaced = 0;
+    let specialsPlaced = 0;
+    let bonusPlaced = 0;
+
+    while (minesPlaced < MINES) {
+        let r = Math.floor(Math.random() * ROWS);
+        let c = Math.floor(Math.random() * COLS);
+        if (board[r][c] === 0 && !(r === safeR && c === safeC)) {
+            board[r][c] = 'M';
+            minesPlaced++;
+        }
+    }
+
+    if (POWERUPS && SPECIAL_MINES > 0) {
+        while (specialsPlaced < SPECIAL_MINES) {
+            let r = Math.floor(Math.random() * ROWS);
+            let c = Math.floor(Math.random() * COLS);
+            if (board[r][c] === 0 && !(r === safeR && c === safeC)) {
+                board[r][c] = 'S';
+                specialsPlaced++;
+            }
+        }
+        while (bonusPlaced < BONUS_CELLS) {
+            let r = Math.floor(Math.random() * ROWS);
+            let c = Math.floor(Math.random() * COLS);
+            if (board[r][c] === 0 && !(r === safeR && c === safeC)) {
+                board[r][c] = 'B';
+                bonusPlaced++;
+            }
+        }
+    }
+}
+
+// ----- Cálculo dos números adjacentes -----
+function calculateNumbers() {
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            if (['M','S','B'].includes(board[r][c])) continue;
+            let count = 0;
+            for (let dr=-1; dr<=1; dr++) {
+                for (let dc=-1; dc<=1; dc++) {
+                    if (dr===0 && dc===0) continue;
+                    let nr = r+dr, nc=c+dc;
+                    if (nr>=0 && nr<ROWS && nc>=0 && nc<COLS) {
+                        if (board[nr][nc]==='M' || board[nr][nc]==='S') count++;
+                    }
+                }
+            }
+            board[r][c] = count;
+        }
+    }
+}
+
+// ----- Renderização do tabuleiro -----
+function renderBoard() {
+    const gameDiv = document.getElementById('game');
+    gameDiv.innerHTML = '';
+    for (let r=0; r<ROWS; r++) {
+        const rowDiv = document.createElement('div');
+        for (let c=0; c<COLS; c++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.dataset.row = r;
+            cell.dataset.col = c;
+
+            if (revealed[r][c]) {
+                cell.classList.add('revealed');
+                if (board[r][c]==='M') cell.textContent = '💣';
+                else if (board[r][c]==='S') cell.textContent = '💥';
+                else if (board[r][c]==='B') cell.textContent = '⭐';
+                else if (board[r][c]>0) cell.textContent = board[r][c];
+            } else if (flagged[r][c]) {
+                cell.classList.add('flagged');
+                cell.textContent = '🚩';
+            }
+
+            // clique direito para flag
+            cell.oncontextmenu = (e)=>{
+                e.preventDefault();
+                if (gameOver || revealed[r][c]) return;
+                flagged[r][c] = !flagged[r][c];
+                updateFlags();
+                renderBoard();
+            };
+
+            // clique esquerdo para revelar
+            cell.onclick = ()=>{
+                if (gameOver || flagged[r][c] || revealed[r][c]) return;
+                if (firstClick) {
+                    placeMines(r,c);
+                    calculateNumbers();
+                    resetTimer();
+                    startTimer();
+                    firstClick=false;
+                }
+                revealCascade(r,c);
+                checkWin();
+            };
+
+            rowDiv.appendChild(cell);
+        }
+        gameDiv.appendChild(rowDiv);
+    }
+}
+
+// ----- Revele células recursivamente -----
+function revealCascade(r,c) {
+    if (r<0 || r>=ROWS || c<0 || c>=COLS || revealed[r][c] || flagged[r][c]) return;
+
+    if (board[r][c]==='M' || board[r][c]==='S') {
+        revealed[r][c] = true;
+        loseGame(board[r][c]==='S' ? "Mine especial! 💥" : "Perdeu! 💣");
+        return;
+    }
+
+    revealed[r][c] = true;
+
+    if (board[r][c]===0) {
+        for (let dr=-1; dr<=1; dr++)
+            for (let dc=-1; dc<=1; dc++)
+                if (dr!==0 || dc!==0) revealCascade(r+dr,c+dc);
+    }
+    renderBoard();
+}
+
+// ----- Perdeu -----
+function loseGame(msg) {
+    gameOver = true;
+    losses++;
+    updateWinsLosses();
+    document.getElementById('status').textContent = msg;
+    stopTimer();
+    revealAllMines();
+    renderBoard();
+}
+
+// ----- Revele todas as minas -----
+function revealAllMines() {
+    for (let r=0; r<ROWS; r++)
+        for (let c=0; c<COLS; c++)
+            if (board[r][c]==='M' || board[r][c]==='S') revealed[r][c]=true;
+}
+
+// ----- Checa vitória -----
+function checkWin() {
+    let total = 0;
+    let revealedCount = 0;
+    for (let r=0; r<ROWS; r++) {
+        for (let c=0; c<COLS; c++) {
+            if (board[r][c]!=='M' && board[r][c]!=='S') total++;
+            if (revealed[r][c] && board[r][c]!=='M' && board[r][c]!=='S') revealedCount++;
+        }
+    }
+    if (revealedCount===total) {
+        gameOver = true;
+        wins++;
+        updateWinsLosses();
+        document.getElementById('status').textContent = "Ganhou! 🎉";
+        revealAllMines();
+        renderBoard();
+        stopTimer();
+    }
+}
+
+// ----- Define dificuldade -----
+function setDifficulty(level) {
+    SPECIAL_MINES = 0;
+    BONUS_CELLS = 0;
+    POWERUPS = false;
+
+    if (level==='easy') { ROWS=8; COLS=8; MINES=8; timerMax=60; }
+    else if (level==='medium') { ROWS=10; COLS=10; MINES=15; timerMax=90; }
+    else if (level==='hard') { ROWS=14; COLS=14; MINES=35; timerMax=150; }
+    else if (level==='powerups') { ROWS=12; COLS=12; MINES=18; SPECIAL_MINES=4; BONUS_CELLS=6; POWERUPS=true; timerMax=120; }
+}
+
+// ----- Inicializa o jogo -----
+function initGame() {
+    initGameArrays();
+    gameOver=false;
+    firstClick=true;
+    document.getElementById('status').textContent='';
+    resetTimer();
+    updateFlags();
+    updateWinsLosses();
+    renderBoard();
+}
+
+    </script>
+</body>
+</html>

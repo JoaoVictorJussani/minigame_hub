@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Slither Local</title>
+<style>
+body { margin:0; display:flex; flex-direction:column; align-items:center; font-family:Arial; background:#111; color:white;}
+canvas { background:#222; margin-top:20px; border:3px solid #555; border-radius:8px; }
+h1 { margin-top:20px; }
+.controls { margin-top:10px; font-size:14px; text-align:center; }
+button { margin-top:10px; padding:8px 15px; font-size:16px; border:none; border-radius:8px; cursor:pointer; background:#2e8b57; color:white; }
+button:hover { background:#246b46; }
+</style>
+</head>
+<body>
+<h1>🐍 Slither Local</h1>
+<canvas id="game" width="600" height="400"></canvas>
+<div class="controls" id="controls"></div>
+<div style="margin-top:10px;">Pontuação: <span id="score1">0</span> - <span id="score2">0</span></div>
+<button onclick="voltarHub()">⬅ Voltar ao Hub</button>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+const speed = 2;
+const segmentSize = 8;
+const growthPerFood = 6;
+
+function createSnake(x, y, color, controls=null) {
+  return {color, pos:{x,y}, dx:0, dy:0, body:[], score:0, growth:0, controls};
+}
+
+// Detectar modo
+const params = new URLSearchParams(window.location.search);
+const modo = params.get('modo') || '2p';
+
+let snakes;
+if(modo==='ai'){
+  snakes = [
+    createSnake(100,100,'lime',{up:'w',down:'s',left:'a',right:'d'}),
+    createSnake(500,300,'cyan',null)
+  ];
+  document.getElementById('controls').textContent = 'Jogador: W A S D | AI: automático';
+} else {
+  snakes = [
+    createSnake(100,100,'lime',{up:'w',down:'s',left:'a',right:'d'}),
+    createSnake(500,300,'cyan',{up:'ArrowUp',down:'ArrowDown',left:'ArrowLeft',right:'ArrowRight'})
+  ];
+  document.getElementById('controls').textContent = 'Jogador1: W A S D | Jogador2: ↑ ↓ ← →';
+}
+
+let food = [];
+function spawnFood(){ food.push({x:Math.random()*canvas.width, y:Math.random()*canvas.height, radius:5}); }
+for(let i=0;i<30;i++) spawnFood();
+
+window.addEventListener('keydown', e=>{
+  snakes.forEach(s=>{
+    if(!s.controls) return;
+    if(e.key===s.controls.up && s.dy===0){ s.dx=0; s.dy=-speed; }
+    if(e.key===s.controls.down && s.dy===0){ s.dx=0; s.dy=speed; }
+    if(e.key===s.controls.left && s.dx===0){ s.dx=-speed; s.dy=0; }
+    if(e.key===s.controls.right && s.dx===0){ s.dx=speed; s.dy=0; }
+  });
+});
+
+// IA simples
+function updateAI(){
+  const ai = snakes.find(s=>s.controls===null);
+  if(!ai || food.length===0) return;
+  let closest = food[0];
+  let minDist = Math.hypot(ai.pos.x - closest.x, ai.pos.y - closest.y);
+  for(let f of food){
+    let d = Math.hypot(ai.pos.x - f.x, ai.pos.y - f.y);
+    if(d<minDist){ minDist=d; closest=f; minDist=d; }
+  }
+  let dx = closest.x - ai.pos.x;
+  let dy = closest.y - ai.pos.y;
+  let dist = Math.hypot(dx,dy);
+  if(dist>0){
+    ai.dx = speed * dx/dist;
+    ai.dy = speed * dy/dist;
+  }
+}
+
+function checkFood(s){
+  for(let i=food.length-1;i>=0;i--){
+    const f = food[i];
+    const dx = s.pos.x - f.x;
+    const dy = s.pos.y - f.y;
+    if(Math.sqrt(dx*dx + dy*dy) < segmentSize + f.radius){
+      food.splice(i,1);
+      s.score++;
+      s.growth += growthPerFood;
+      spawnFood();
+    }
+  }
+}
+
+function checkWall(s){ return s.pos.x<0 || s.pos.x>canvas.width || s.pos.y<0 || s.pos.y>canvas.height; }
+
+function headCollision(s, other){
+  for(let i=0;i<other.body.length-1;i++){
+    const seg = other.body[i];
+    const dx = s.pos.x - seg.x;
+    const dy = s.pos.y - seg.y;
+    if(Math.sqrt(dx*dx + dy*dy) < segmentSize) return true;
+  }
+  return false;
+}
+
+function headVsHead(s1,s2){
+  const dx = s1.pos.x - s2.pos.x;
+  const dy = s1.pos.y - s2.pos.y;
+  return Math.sqrt(dx*dx + dy*dy) < segmentSize;
+}
+
+function update(){
+  ctx.fillStyle='#222';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  if(modo==='ai') updateAI();
+
+  for(let s of snakes){
+    s.pos.x += s.dx;
+    s.pos.y += s.dy;
+    s.body.push({x:s.pos.x,y:s.pos.y});
+    if(s.growth>0){ s.growth--; } else if(s.body.length>50 + s.score*2){ s.body.shift(); }
+    checkFood(s);
+  }
+
+  let winner = null;
+  if(checkWall(snakes[0])) winner=(modo==='ai')?'AI':'Jogador2';
+  if(checkWall(snakes[1])) winner=(modo==='ai')?'Jogador':'Jogador1';
+
+  if(!winner){
+    if(headCollision(snakes[0],snakes[1])) winner=(modo==='ai')?'AI':'Jogador2';
+    if(headCollision(snakes[1],snakes[0])) winner=(modo==='ai')?'Jogador':'Jogador1';
+    if(headVsHead(snakes[0],snakes[1])){
+      if(snakes[0].score>snakes[1].score) winner=(modo==='ai')?'Jogador':'Jogador1';
+      else if(snakes[1].score>snakes[0].score) winner=(modo==='ai')?'AI':'Jogador2';
+      else winner='Empate';
+    }
+  }
+
+  if(winner){
+    alert(`Fim de jogo! Vencedor: ${winner}\n${modo==='ai'?'Jogador':'Jogador1'}: ${snakes[0].score} - ${modo==='ai'?'AI':'Jogador2'}: ${snakes[1].score}`);
+    if(modo==='ai'){
+      snakes[0]=createSnake(100,100,'lime',{up:'w',down:'s',left:'a',right:'d'});
+      snakes[1]=createSnake(500,300,'cyan',null);
+    } else {
+      snakes[0]=createSnake(100,100,'lime',{up:'w',down:'s',left:'a',right:'d'});
+      snakes[1]=createSnake(500,300,'cyan',{up:'ArrowUp',down:'ArrowDown',left:'ArrowLeft',right:'ArrowRight'});
+    }
+    food=[]; for(let i=0;i<30;i++) spawnFood();
+  }
+
+  food.forEach(f=>{
+    ctx.fillStyle='red';
+    ctx.beginPath();
+    ctx.arc(f.x,f.y,f.radius,0,Math.PI*2);
+    ctx.fill();
+  });
+
+  snakes.forEach(s=>{
+    ctx.fillStyle=s.color;
+    s.body.forEach((seg,i)=>{
+      ctx.globalAlpha=i/s.body.length;
+      ctx.beginPath();
+      ctx.arc(seg.x,seg.y,segmentSize,0,Math.PI*2);
+      ctx.fill();
+    });
+    ctx.globalAlpha=1;
+  });
+
+  document.getElementById('score1').textContent = snakes[0].score;
+  document.getElementById('score2').textContent = snakes[1].score;
+
+  requestAnimationFrame(update);
+}
+
+function voltarHub(){ window.location.href='index.html'; }
+
+update();
+</script>
+</body>
+</html>

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Capybara Runner</title>
+<style>
+body {
+  margin:0;
+  font-family: Arial, sans-serif;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  background: linear-gradient(to top, #87ceeb 0%, #fff 100%);
+}
+h1 {
+  margin-top: 20px;
+  text-align:center;
+}
+canvas {
+  background:#fff;
+  margin-top:20px;
+  border:3px solid #555;
+  border-radius:8px;
+}
+.controls {
+  margin-top:15px;
+}
+button {
+  padding:10px 15px;
+  font-weight:bold;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  background-color:#2e8b57;
+  color:white;
+  font-size:16px;
+}
+button:hover { background-color:#246b46; }
+</style>
+</head>
+<body>
+<h1>🏃 Capybara Runner</h1>
+<canvas id="game" width="800" height="200"></canvas>
+<div class="controls">
+  <button onclick="voltarHub()">⬅ Voltar ao Hub</button>
+</div>
+
+<script>
+// imagem do capybara
+const capyImg = new Image();
+capyImg.src = "./capybara.gif"; // coloque o arquivo capybara.gif ou .png na mesma pasta
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+// pontuações
+let score = 0;
+let bestScore = parseInt(localStorage.getItem("capybaraBest") || "0",10);
+
+let gameOverFlag = false;
+
+// jogador - capybara
+const player = {
+  x:50,
+  y:150,
+  width: 60,  
+  height:60,
+  vy:0,
+  gravity:1.2,
+  jumpPower:-18,
+  onGround:true
+};
+
+// obstáculos
+let obstacles = [];
+let spawnTimer = 0;
+let baseSpeed = 6; // velocidade inicial
+
+// input
+let keys = {};
+window.addEventListener('keydown', e => { keys[e.code] = true; if(e.code==='Space' || e.code==='ArrowUp'){ jump(); }});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+function jump(){
+  if(player.onGround){
+    player.vy = player.jumpPower;
+    player.onGround = false;
+  }
+}
+
+function spawnObstacle(){
+  const height = 30 + Math.random()*40;
+  obstacles.push({
+    x: canvas.width,
+    y: 200-height,
+    width:20,
+    height:height
+  });
+}
+
+function update(){
+  if(gameOverFlag) return;
+
+  // física do jogador
+  player.vy += player.gravity;
+  player.y += player.vy;
+
+  if(player.y + player.height > 200){
+    player.y = 200 - player.height;
+    player.vy = 0;
+    player.onGround = true;
+  }
+
+  // spawn obstáculos
+  spawnTimer++;
+  let spawnInterval = Math.max(90 - Math.floor(score/5)*5, 30); // intervalo diminui com score
+  if(spawnTimer > spawnInterval){
+    spawnObstacle();
+    spawnTimer = 0;
+  }
+
+  // mover obstáculos e colisão
+  for(let i=obstacles.length-1;i>=0;i--){
+    let currentSpeed = baseSpeed + Math.floor(score/5); // velocidade aumenta com score
+    obstacles[i].x -= currentSpeed;
+
+    // colisão
+    if(player.x < obstacles[i].x + obstacles[i].width &&
+       player.x + player.width > obstacles[i].x &&
+       player.y < obstacles[i].y + obstacles[i].height &&
+       player.y + player.height > obstacles[i].y){
+         gameOver();
+       }
+
+    // passar obstáculo
+    if(obstacles[i].x + obstacles[i].width < 0){
+      obstacles.splice(i,1);
+      score++;
+      if(score > bestScore){
+        bestScore = score;
+        localStorage.setItem("capybaraBest", bestScore);
+      }
+    }
+  }
+}
+
+function gameOver(){
+  gameOverFlag = true;
+  alert("💀 Game Over! Pontuação: " + score + " | Melhor: " + bestScore);
+  location.reload();
+}
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // chão
+  ctx.fillStyle = "#654321";
+  ctx.fillRect(0,200,canvas.width,10);
+
+  // capybara
+  ctx.drawImage(capyImg, player.x, player.y, player.width, player.height);
+
+  // obstáculos
+  ctx.fillStyle="#555";
+  obstacles.forEach(o => ctx.fillRect(o.x,o.y,o.width,o.height));
+
+  // pontuação
+  ctx.fillStyle="#000";
+  ctx.font="20px Arial";
+  ctx.fillText("Score: "+score,10,30);
+  ctx.fillText("Melhor: "+bestScore,10,55);
+}
+
+function loop(){
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+function voltarHub(){ window.location.href='index.html'; }
+
+loop();
+</script>
+
+</body>
+</html>
