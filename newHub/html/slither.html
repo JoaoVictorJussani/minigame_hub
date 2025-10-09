@@ -39,16 +39,16 @@ const modo = params.get('modo') || '2p';
 let snakes;
 if(modo==='ai'){
   snakes = [
-    createSnake(100,100,'lime',{up:'z',down:'s',left:'q',right:'d'}),
+    createSnake(100,100,'lime',{up:'w',down:'s',left:'a',right:'d'}),
     createSnake(500,300,'cyan',null)
   ];
-  document.getElementById('controls').textContent = 'Joueur: Z Q S D | IA: automatique';
+  document.getElementById('controls').textContent = 'Joueur: W A S D | IA: automatique';
 } else {
   snakes = [
-    createSnake(100,100,'lime',{up:'z',down:'s',left:'q',right:'d'}),
+    createSnake(100,100,'lime',{up:'w',down:'s',left:'a',right:'d'}),
     createSnake(500,300,'cyan',{up:'ArrowUp',down:'ArrowDown',left:'ArrowLeft',right:'ArrowRight'})
   ];
-  document.getElementById('controls').textContent = 'Joueur1: Z Q S D | Joueur2: ↑ ↓ ← →';
+  document.getElementById('controls').textContent = 'Joueur1: W A S D | Joueur2: ↑ ↓ ← →';
 }
 
 let food = [];
@@ -147,7 +147,7 @@ function update(){
   if(winner){
     alert(`Fin de partie ! Gagnant : ${winner}\n${modo==='ai'?'Joueur':'Joueur1'}: ${snakes[0].score} - ${modo==='ai'?'IA':'Joueur2'}: ${snakes[1].score}`);
     if(modo==='ai'){
-      snakes[0]=createSnake(100,100,'lime',{up:'z',down:'s',left:'q',right:'d'});
+      snakes[0]=createSnake(100,100,'lime',{up:'w',down:'s',left:'a',right:'d'});
       snakes[1]=createSnake(500,300,'cyan',null);
     } else {
       snakes[0]=createSnake(100,100,'lime',{up:'w',down:'s',left:'a',right:'d'});
