@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -45,10 +45,10 @@ button:hover { background-color:#246b46; }
 <h1>🧱 Tetris</h1>
 <canvas id="tetris" width="300" height="600"></canvas>
 <div class="controls">
-  <button onclick="voltarHub()">⬅ Voltar ao Hub</button>
+  <button onclick="voltarHub()">⬅ Retour au Hub</button>
 </div>
 <div class="scoreboard" style="margin-top:10px;font-size:18px;">
-  Pontuação: <span id="score">0</span> — Melhor: <span id="best">0</span>
+  Score: <span id="score">0</span> — Meilleur: <span id="best">0</span>
 </div>
 
 <script>
@@ -176,7 +176,7 @@ function resetPlayer(){
     arena.forEach(row=>row.fill(0));
     player.score = 0;
     updateScore();
-    alert("💥 Game Over!");
+    alert("💥 Partie terminée !");
   }
 }
 

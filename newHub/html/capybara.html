@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -43,7 +43,7 @@ button:hover { background-color:#246b46; }
 <h1>🏃 Capybara Runner</h1>
 <canvas id="game" width="800" height="200"></canvas>
 <div class="controls">
-  <button onclick="voltarHub()">⬅ Voltar ao Hub</button>
+  <button onclick="voltarHub()">⬅ Retour au Hub</button>
 </div>
 
 <script>
@@ -54,13 +54,13 @@ capyImg.src = "../images/capybara.png"; // le fichier doit être dans images/
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-// pontuações
+// scores
 let score = 0;
 let bestScore = parseInt(localStorage.getItem("capybaraBest") || "0",10);
 
 let gameOverFlag = false;
 
-// jogador - capybara
+// joueur - capybara
 const player = {
   x:50,
   y:150,
@@ -72,10 +72,10 @@ const player = {
   onGround:true
 };
 
-// obstáculos
+// obstacles
 let obstacles = [];
 let spawnTimer = 0;
-let baseSpeed = 6; // velocidade inicial
+let baseSpeed = 6; // vitesse initiale
 
 // input
 let keys = {};
@@ -102,7 +102,7 @@ function spawnObstacle(){
 function update(){
   if(gameOverFlag) return;
 
-  // física do jogador
+  // physique du joueur
   player.vy += player.gravity;
   player.y += player.vy;
 
@@ -112,20 +112,20 @@ function update(){
     player.onGround = true;
   }
 
-  // spawn obstáculos
+  // spawn obstacles
   spawnTimer++;
-  let spawnInterval = Math.max(90 - Math.floor(score/5)*5, 30); // intervalo diminui com score
+  let spawnInterval = Math.max(90 - Math.floor(score/5)*5, 30); // intervalle diminue avec le score
   if(spawnTimer > spawnInterval){
     spawnObstacle();
     spawnTimer = 0;
   }
 
-  // mover obstáculos e colisão
+  // déplacer les obstacles et collision
   for(let i=obstacles.length-1;i>=0;i--){
-    let currentSpeed = baseSpeed + Math.floor(score/5); // velocidade aumenta com score
+    let currentSpeed = baseSpeed + Math.floor(score/5); // vitesse augmente avec le score
     obstacles[i].x -= currentSpeed;
 
-    // colisão
+    // collision
     if(player.x < obstacles[i].x + obstacles[i].width &&
        player.x + player.width > obstacles[i].x &&
        player.y < obstacles[i].y + obstacles[i].height &&
@@ -133,7 +133,7 @@ function update(){
          gameOver();
        }
 
-    // passar obstáculo
+    // passer obstacle
     if(obstacles[i].x + obstacles[i].width < 0){
       obstacles.splice(i,1);
       score++;
@@ -147,29 +147,29 @@ function update(){
 
 function gameOver(){
   gameOverFlag = true;
-  alert("💀 Game Over! Pontuação: " + score + " | Melhor: " + bestScore);
+  alert("💀 Partie terminée ! Score : " + score + " | Meilleur : " + bestScore);
   location.reload();
 }
 
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // chão
+  // sol
   ctx.fillStyle = "#654321";
   ctx.fillRect(0,200,canvas.width,10);
 
   // capybara
   ctx.drawImage(capyImg, player.x, player.y, player.width, player.height);
 
-  // obstáculos
+  // obstacles
   ctx.fillStyle="#555";
   obstacles.forEach(o => ctx.fillRect(o.x,o.y,o.width,o.height));
 
-  // pontuação
+  // score
   ctx.fillStyle="#000";
   ctx.font="20px Arial";
   ctx.fillText("Score: "+score,10,30);
-  ctx.fillText("Melhor: "+bestScore,10,55);
+  ctx.fillText("Meilleur: "+bestScore,10,55);
 }
 
 function loop(){

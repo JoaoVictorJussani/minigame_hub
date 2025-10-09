@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Campo Minado</title>
+    <title>Démineur</title>
     <link rel="stylesheet" href="style.css">
     <style>
         body {
@@ -127,7 +127,7 @@
 </head>
 <body>
     <header>
-        <h1>💣 Campo Minado</h1>
+        <h1>💣 Démineur</h1>
     </header>
 
     <main>
@@ -136,19 +136,19 @@
             <span id="flags">🚩 15</span>
             <span id="wins">🏆 0</span>
             <span id="losses">💀 0</span>
-            <button id="restart">Reiniciar</button>
+            <button id="restart">Recommencer</button>
             <select id="difficulty">
-                <option value="easy">Fácil</option>
-                <option value="medium" selected>Médio</option>
-                <option value="hard">Difícil</option>
-                <option value="powerups">Powerups</option>
+                <option value="easy">Facile</option>
+                <option value="medium" selected>Moyen</option>
+                <option value="hard">Difficile</option>
+                <option value="powerups">Bonus</option>
             </select>
         </div>
 
         <div id="status"></div>
         <div id="game"></div>
 
-        <button onclick="voltarMenu()" style="margin-top:20px;">⬅ Voltar ao Hub</button>
+        <button onclick="voltarMenu()" style="margin-top:20px;">⬅ Retour au Hub</button>
     </main>
     <script>
         function voltarMenu() { window.location.href = "../index.html"; }
@@ -194,7 +194,7 @@ function startTimer() {
         updateTimerDisplay();
         if (timer <= 0) {
             stopTimer();
-            if (!gameOver) loseGame("Tempo esgotado!");
+            if (!gameOver) loseGame("Temps écoulé !");
         }
     }, 1000);
 }
@@ -338,7 +338,7 @@ function revealCascade(r,c) {
 
     if (board[r][c]==='M' || board[r][c]==='S') {
         revealed[r][c] = true;
-        loseGame(board[r][c]==='S' ? "Mine especial! 💥" : "Perdeu! 💣");
+        loseGame(board[r][c]==='S' ? "Mine spéciale ! 💥" : "Perdu ! 💣");
         return;
     }
 
@@ -384,7 +384,7 @@ function checkWin() {
         gameOver = true;
         wins++;
         updateWinsLosses();
-        document.getElementById('status').textContent = "Ganhou! 🎉";
+        document.getElementById('status').textContent = "Gagné ! 🎉";
         revealAllMines();
         renderBoard();
         stopTimer();

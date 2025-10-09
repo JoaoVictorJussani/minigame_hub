@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,8 +17,8 @@ button:hover { background:#246b46; }
 <h1>🐍 Slither Local</h1>
 <canvas id="game" width="600" height="400"></canvas>
 <div class="controls" id="controls"></div>
-<div style="margin-top:10px;">Pontuação: <span id="score1">0</span> - <span id="score2">0</span></div>
-<button onclick="voltarHub()">⬅ Voltar ao Hub</button>
+<div style="margin-top:10px;">Score: <span id="score1">0</span> - <span id="score2">0</span></div>
+<button onclick="voltarHub()">⬅ Retour au Hub</button>
 
 <script>
 const canvas = document.getElementById('game');
@@ -39,16 +39,16 @@ const modo = params.get('modo') || '2p';
 let snakes;
 if(modo==='ai'){
   snakes = [
-    createSnake(100,100,'lime',{up:'w',down:'s',left:'a',right:'d'}),
+    createSnake(100,100,'lime',{up:'z',down:'s',left:'q',right:'d'}),
     createSnake(500,300,'cyan',null)
   ];
-  document.getElementById('controls').textContent = 'Jogador: W A S D | AI: automático';
+  document.getElementById('controls').textContent = 'Joueur: Z Q S D | IA: automatique';
 } else {
   snakes = [
-    createSnake(100,100,'lime',{up:'w',down:'s',left:'a',right:'d'}),
+    createSnake(100,100,'lime',{up:'z',down:'s',left:'q',right:'d'}),
     createSnake(500,300,'cyan',{up:'ArrowUp',down:'ArrowDown',left:'ArrowLeft',right:'ArrowRight'})
   ];
-  document.getElementById('controls').textContent = 'Jogador1: W A S D | Jogador2: ↑ ↓ ← →';
+  document.getElementById('controls').textContent = 'Joueur1: Z Q S D | Joueur2: ↑ ↓ ← →';
 }
 
 let food = [];
@@ -131,23 +131,23 @@ function update(){
   }
 
   let winner = null;
-  if(checkWall(snakes[0])) winner=(modo==='ai')?'AI':'Jogador2';
-  if(checkWall(snakes[1])) winner=(modo==='ai')?'Jogador':'Jogador1';
+  if(checkWall(snakes[0])) winner=(modo==='ai')?'IA':'Joueur2';
+  if(checkWall(snakes[1])) winner=(modo==='ai')?'Joueur':'Joueur1';
 
   if(!winner){
-    if(headCollision(snakes[0],snakes[1])) winner=(modo==='ai')?'AI':'Jogador2';
-    if(headCollision(snakes[1],snakes[0])) winner=(modo==='ai')?'Jogador':'Jogador1';
+    if(headCollision(snakes[0],snakes[1])) winner=(modo==='ai')?'IA':'Joueur2';
+    if(headCollision(snakes[1],snakes[0])) winner=(modo==='ai')?'Joueur':'Joueur1';
     if(headVsHead(snakes[0],snakes[1])){
-      if(snakes[0].score>snakes[1].score) winner=(modo==='ai')?'Jogador':'Jogador1';
-      else if(snakes[1].score>snakes[0].score) winner=(modo==='ai')?'AI':'Jogador2';
-      else winner='Empate';
+      if(snakes[0].score>snakes[1].score) winner=(modo==='ai')?'Joueur':'Joueur1';
+      else if(snakes[1].score>snakes[0].score) winner=(modo==='ai')?'IA':'Joueur2';
+      else winner='Égalité';
     }
   }
 
   if(winner){
-    alert(`Fim de jogo! Vencedor: ${winner}\n${modo==='ai'?'Jogador':'Jogador1'}: ${snakes[0].score} - ${modo==='ai'?'AI':'Jogador2'}: ${snakes[1].score}`);
+    alert(`Fin de partie ! Gagnant : ${winner}\n${modo==='ai'?'Joueur':'Joueur1'}: ${snakes[0].score} - ${modo==='ai'?'IA':'Joueur2'}: ${snakes[1].score}`);
     if(modo==='ai'){
-      snakes[0]=createSnake(100,100,'lime',{up:'w',down:'s',left:'a',right:'d'});
+      snakes[0]=createSnake(100,100,'lime',{up:'z',down:'s',left:'q',right:'d'});
       snakes[1]=createSnake(500,300,'cyan',null);
     } else {
       snakes[0]=createSnake(100,100,'lime',{up:'w',down:'s',left:'a',right:'d'});

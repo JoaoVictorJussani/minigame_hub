@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="fr">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Flappy — Mini Game</title>
+<title>Flappy — Mini Jeu</title>
 <style>
   :root{
     --bg1: #70c5ce;
@@ -26,20 +26,20 @@
 </style>
 </head>
 <body>
-<header>🐦 Flappy — Segura a barra e passa nos canos!</header>
+<header>🐦 Flappy — Appuie sur espace et passe entre les tuyaux !</header>
 
 <div id="wrap">
   <canvas id="c" width="480" height="640"></canvas>
 
   <div class="controls">
-    <button id="startBtn">Jogar</button>
-    <button id="restartBtn" style="display:none">Reiniciar</button>
-    <button onclick="voltarMenu()">⬅ Voltar ao Hub</button>
-    <div class="hint">Use Espaço / Clique / Toque pra bater</div>
+    <button id="startBtn">Jouer</button>
+    <button id="restartBtn" style="display:none">Recommencer</button>
+    <button onclick="voltarMenu()">⬅ Retour au Hub</button>
+    <div class="hint">Utilise Espace / Clique / Touche pour voler</div>
   </div>
 
   <div class="scoreboard">
-    Pontuação: <span id="score">0</span> — Melhor: <span id="best">0</span>
+    Score: <span id="score">0</span> — Meilleur: <span id="best">0</span>
   </div>
 </div>
 
@@ -88,7 +88,7 @@
   }
 
 function flap(){
-  if (!running) return; // não deixa bater asa se não estiver jogando
+  if (!running) return; // ne pas voler si le jeu n'est pas lancé
   bird.vy = FLAP;
 }
 
@@ -152,9 +152,9 @@ function flap(){
     ctx.fillStyle = '#fff';
     ctx.font = '28px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('💥 Game Over!', W/2, H/2 - 10);
+    ctx.fillText('💥 Partie terminée !', W/2, H/2 - 10);
     ctx.font = '18px Arial';
-    ctx.fillText('Clique em Reiniciar ou pressione Espaço', W/2, H/2 + 22);
+    ctx.fillText('Clique sur Recommencer ou appuie sur Espace', W/2, H/2 + 22);
   }
 
   function draw(){
