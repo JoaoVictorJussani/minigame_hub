@@ -47,9 +47,9 @@ button:hover { background-color:#246b46; }
 </div>
 
 <script>
-// imagem do capybara
+// image du capybara
 const capyImg = new Image();
-capyImg.src = "./capybara.gif"; // coloque o arquivo capybara.gif ou .png na mesma pasta
+capyImg.src = "../images/capybara.png"; // le fichier doit être dans images/
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -178,7 +178,7 @@ function loop(){
   requestAnimationFrame(loop);
 }
 
-function voltarHub(){ window.location.href='./index.html'; }
+function voltarHub(){ window.location.href='../index.html'; }
 
 loop();
 </script>

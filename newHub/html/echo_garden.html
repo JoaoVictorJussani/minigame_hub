@@ -385,9 +385,9 @@ window.ECHO_LEVELS = [
                 
                 // Se for o último nível, volta pro hub
                 if (idx === levels.length - 1) {
-                    loadLevel(0); // volta pro nível 1 ou hub
+                    loadLevel(0); // retourne au niveau 1 ou hub
                     alert('De retour au hub!');
-                    window.location.href = 'index.html'; // volta pro hub
+                    window.location.href = '../index.html'; // retourne au hub
                 } else {
                     loadLevel(idx + 1);
                 }
