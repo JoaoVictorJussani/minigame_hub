@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <title>Tower Defense: Mini</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <style>
+        :root{
+            --bg-1: #071021;
+            --bg-2: #0f1a2b;
+            --neon-pink: #ff4fcc;
+            --neon-cyan: #19f0ff;
+            --neon-green: #7cff7c;
+            --muted: rgba(255,255,255,0.75);
+            --glass: rgba(255,255,255,0.04);
+        }
+        body {
+            background: linear-gradient(180deg,var(--bg-1), var(--bg-2));
+            color: var(--muted);
+            font-family: Inter, 'Segoe UI', Roboto, Arial, sans-serif;
+            min-height:100vh;
+            margin:0;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:center;
+        }
+        h1 {
+            color: #fff;
+            text-shadow: 0 0 12px var(--neon-pink), 0 0 24px var(--neon-cyan);
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            color: var(--neon-cyan);
+            margin-bottom: 18px;
+            font-size: 1.1rem;
+            text-shadow: 0 0 8px var(--neon-cyan);
+        }
+        .game-ui {
+            margin-bottom: 12px;
+            font-size: 1.1rem;
+            color: var(--neon-green);
+        }
+        .board {
+            background: var(--glass);
+            border-radius: 18px;
+            box-shadow: 0 0 32px var(--neon-cyan), 0 0 12px var(--neon-pink);
+            padding: 16px;
+            display: grid;
+            grid-template-columns: repeat(10, 32px);
+            grid-template-rows: repeat(8, 32px);
+            gap: 4px;
+            margin-bottom: 18px;
+        }
+        .cell {
+            width: 32px; height: 32px;
+            background: #222c;
+            border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem;
+            position: relative;
+        }
+        .cell.path { background: linear-gradient(90deg, var(--neon-cyan), var(--glass)); }
+        .cell.tower { background: linear-gradient(135deg, var(--neon-pink), var(--neon-green)); }
+        .enemy {
+            width: 20px; height: 20px;
+            background: var(--neon-green);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--neon-green);
+            position: absolute;
+            left: 6px; top: 6px;
+        }
+        .bullet {
+            width: 8px; height: 8px;
+            background: var(--neon-pink);
+            border-radius: 50%;
+            position: absolute;
+            left: 12px; top: 12px;
+            box-shadow: 0 0 8px var(--neon-pink);
+        }
+        .footer {
+            color: rgba(255,255,255,0.45);
+            font-size: 0.95rem;
+            margin-top: 24px;
+            text-align: center;
+        }
+        .footer a {
+            display: inline-block;
+            padding: 8px 18px;
+            border-radius: 8px;
+            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-pink));
+            color: #fff !important;
+            text-decoration: none;
+            font-weight: bold;
+            box-shadow: 0 0 12px var(--neon-cyan), 0 0 12px var(--neon-pink);
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+        .footer a:hover {
+            background: linear-gradient(90deg, var(--neon-pink), var(--neon-cyan));
+            box-shadow: 0 0 24px var(--neon-pink), 0 0 24px var(--neon-cyan);
+        }
+        .btn {
+            background: var(--neon-pink);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 18px;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 0 0 8px var(--neon-pink);
+            margin-bottom: 8px;
+        }
+        .btn:hover {
+            background: var(--neon-cyan);
+            box-shadow: 0 0 12px var(--neon-cyan);
+        }
+    </style>
+</head>
+<body>
+    <h1>🧙 Tower Defense: Mini</h1>
+    <div class="subtitle">Place des tours sur la grille pour stopper les vagues d'ennemis !</div>
+    <div style="color:var(--neon-pink);margin-bottom:10px;font-size:1rem;text-align:center;">
+        Clique sur une case <b>hors du chemin</b> pour acheter une tour.<br>
+        Sélectionne le type de tour ci-dessous puis clique sur la grille.<br>
+        Améliore une tour en cliquant dessus.
+    </div>
+    <div class="game-ui">
+        Vague: <span id="wave">1</span> | Score: <span id="score">0</span> | Argent: <span id="money">100</span>
+        <button class="btn" onclick="restart()">Recommencer</button>
+    </div>
+    <div style="margin-bottom:10px;">
+        <label for="towerType" style="color:var(--neon-cyan);font-weight:bold;">Tour:</label>
+        <select id="towerType">
+            <option value="basic">Basique (10 dmg, 50€)</option>
+            <option value="sniper">Sniper (20 dmg, 100€)</option>
+            <option value="slow">Ralentie (5 dmg, ralentit, 80€)</option>
+        </select>
+    </div>
+    <div class="board" id="board"></div>
+    <div class="footer">
+        <a href="../index.html">← Retour au Hub</a>
+    </div>
+    <script>
+        // Tower Defense amélioré
+        const W = 10, H = 11;
+        const boardEl = document.getElementById('board');
+        const waveEl = document.getElementById('wave');
+        const scoreEl = document.getElementById('score');
+        const moneyEl = document.getElementById('money');
+        const towerTypeEl = document.getElementById('towerType');
+        let grid, towers, enemies, bullets, wave, score, running, path, money;
+
+        function makePath() {
+            let p = [];
+            // Chemin : chaque ligne va de gauche à droite, saute une ligne à chaque fois
+            for(let y=1; y<H-1; y+=2) {
+                for(let x=0; x<W; x++) p.push([x, y]);
+            }
+            return p;
+        }
+
+        function restart() {
+            grid = Array(H).fill().map(()=>Array(W).fill(null));
+            towers = [];
+            enemies = [];
+            bullets = [];
+            wave = 1;
+            score = 0;
+            money = 100;
+            running = true;
+            path = makePath();
+            render();
+            spawnWave();
+        }
+
+        function render() {
+            boardEl.innerHTML = '';
+            for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                if(path.some(([px,py])=>px===x&&py===y)) cell.classList.add('path');
+                if(grid[y][x]) cell.classList.add('tower');
+                cell.onclick = ()=>{
+                    if(!cell.classList.contains('path') && !grid[y][x] && running){
+                        // Achat tour
+                        let type = towerTypeEl.value;
+                        let cost = type==="basic"?50:type==="sniper"?100:80;
+                        if(money>=cost){
+                            grid[y][x]={type,level:1,cd:0};
+                            towers.push({x,y,type,level:1,cd:0});
+                            money-=cost;
+                            render();
+                        } else {
+                            alert("Pas assez d'argent !");
+                        }
+                    } else if(grid[y][x] && running) {
+                        // Amélioration tour
+                        let t = grid[y][x];
+                        let upCost = 40*t.level;
+                        if(money>=upCost){
+                            t.level++;
+                            t.cd=0;
+                            towers.find(tt=>tt.x===x&&tt.y===y).level = t.level;
+                            money-=upCost;
+                            render();
+                        } else {
+                            alert("Pas assez d'argent pour améliorer !");
+                        }
+                    }
+                };
+                boardEl.appendChild(cell);
+            }
+            // Draw towers (type/level)
+            towers.forEach(t=>{
+                const i = t.y*W+t.x;
+                const cell = boardEl.children[i];
+                if(cell){
+                    cell.innerHTML = `<span style="font-size:1.1rem;color:#fff;">${t.type==="basic"?"🟦":t.type==="sniper"?"🟥":"🟨"}<span style="font-size:0.8rem;">${t.level}</span></span>`;
+                }
+            });
+            // Draw enemies
+            enemies.forEach(e=>{
+                const idx = e.pos;
+                if(idx>=0 && idx<path.length){
+                    const [x,y]=path[idx];
+                    const i = y*W+x;
+                    const cell = boardEl.children[i];
+                    if(cell){
+                        const enemy = document.createElement('div');
+                        enemy.className = 'enemy';
+                        // Barre de PV
+                        const hpBar = document.createElement('div');
+                        hpBar.style.position = "absolute";
+                        hpBar.style.bottom = "2px";
+                        hpBar.style.left = "2px";
+                        hpBar.style.width = "28px";
+                        hpBar.style.height = "5px";
+                        hpBar.style.background = "#222";
+                        hpBar.style.borderRadius = "3px";
+                        const hpFill = document.createElement('div');
+                        hpFill.style.height = "100%";
+                        hpFill.style.borderRadius = "3px";
+                        hpFill.style.background = "linear-gradient(90deg,var(--neon-green),var(--neon-pink))";
+                        hpFill.style.width = Math.max(0,28*e.hp/e.maxHp)+"px";
+                        hpBar.appendChild(hpFill);
+                        cell.appendChild(enemy);
+                        cell.appendChild(hpBar);
+                    }
+                }
+            });
+            // Draw bullets
+            bullets.forEach(b=>{
+                const [x,y]=b;
+                const i = y*W+x;
+                const cell = boardEl.children[i];
+                if(cell){
+                    const bullet = document.createElement('div');
+                    bullet.className = 'bullet';
+                    cell.appendChild(bullet);
+                }
+            });
+            waveEl.textContent = wave;
+            scoreEl.textContent = score;
+            moneyEl.textContent = money;
+        }
+
+        function spawnWave() {
+            let n = 4 + wave * 2;
+            let spawnInterval = 7; // Plus grand que la vitesse pour éviter chevauchement
+            for(let i=0;i<n;i++){
+                enemies.push({
+                    pos: -i * spawnInterval, // Décalage pour chaque ennemi
+                    hp: 20 + wave * 10,
+                    maxHp: 20 + wave * 10,
+                    speed: 1, // Vitesse ralentie
+                    slow: 0
+                });
+            }
+        }
+
+        function gameLoop() {
+            if(!running) return;
+            // Move enemies
+            enemies.forEach(e=>{
+                if(e.hp>0){
+                    if(e.slow>0){
+                        e.slow--;
+                        if(e.slow%2===0) e.pos+=e.speed;
+                    }else{
+                        e.pos+=e.speed;
+                    }
+                }
+            });
+            // Remove dead/enemies at end
+            enemies = enemies.filter(e=>{
+                if(e.hp<=0){
+                    score+=1;
+                    let gain = 20 + Math.floor(e.maxHp/10);
+                    money+=gain;
+                    return false;
+                }
+                if(e.pos>=path.length){
+                    running=false;
+                    alert('Défaite ! Score: '+score);
+                    return false;
+                }
+                return true;
+            });
+            // Towers shoot
+            towers.forEach(t=>{
+                t.cd--;
+                if(t.cd<=0){
+                    // Find nearest enemy in range (range=2+level)
+                    let targets = enemies.filter(e=>{
+                        if(e.hp<=0||e.pos>=path.length||e.pos<0) return false;
+                        const [ex,ey]=path[Math.floor(e.pos)];
+                        return Math.abs(ex-t.x)+Math.abs(ey-t.y)<=2+t.level;
+                    });
+                    if(targets.length){
+                        let target = targets[0];
+                        let dmg = t.type==="basic"?10*t.level:t.type==="sniper"?20*t.level:5*t.level;
+                        if(t.type==="slow") target.slow=4;
+                        target.hp-=dmg;
+                        bullets.push([path[Math.floor(target.pos)][0], path[Math.floor(target.pos)][1]]);
+                        t.cd = t.type==="basic"?8:t.type==="sniper"?12:10;
+                    }
+                }
+            });
+            // Animate bullets (just remove after draw)
+            bullets = [];
+            render();
+            // Next wave if no enemies
+            if(enemies.length===0 && running){
+                wave++;
+                spawnWave();
+            }
+            setTimeout(gameLoop, 350);
+        }
+
+        restart();
+        setTimeout(gameLoop, 350);
+    </script>
+</body>
+</html>
