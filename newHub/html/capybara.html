@@ -5,38 +5,75 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Capybara Runner</title>
 <style>
+:root {
+  --bg: #0b1020;
+  --card: #0f1724;
+  --accent: #59d3c5;
+  --muted: #95a3b8;
+}
 body {
   margin:0;
-  font-family: Arial, sans-serif;
+  font-family: Inter, Arial, sans-serif;
+  background: linear-gradient(180deg, #071021 0%, #071527 60%);
+  color: #e6f0f4;
   display:flex;
   flex-direction:column;
   align-items:center;
-  background: linear-gradient(to top, #87ceeb 0%, #fff 100%);
+  min-height:100%;
+  padding: 24px;
 }
 h1 {
   margin-top: 20px;
   text-align:center;
+  font-size:2.2rem;
+  color: var(--accent);
+  text-shadow: 0 2px 12px #071021;
+  letter-spacing: 1px;
 }
 canvas {
-  background:#fff;
+  background: linear-gradient(180deg, rgba(12, 18, 30, 0.6), rgba(6, 10, 18, 0.6));
   margin-top:20px;
-  border:3px solid #555;
-  border-radius:8px;
+  border:2.5px solid var(--accent);
+  border-radius:14px;
+  box-shadow: 0 8px 30px rgba(2,8,20,0.7);
+  display:block;
 }
 .controls {
-  margin-top:15px;
+  margin-top:18px;
+  display:flex;
+  gap:12px;
+  align-items:center;
 }
 button {
-  padding:10px 15px;
+  padding:10px 18px;
   font-weight:bold;
   border:none;
-  border-radius:8px;
+  border-radius:10px;
   cursor:pointer;
-  background-color:#2e8b57;
-  color:white;
-  font-size:16px;
+  background: linear-gradient(180deg, #172433, #0f1b2a);
+  color: #dff7f2;
+  font-size:17px;
+  box-shadow: 0 4px 16px rgba(2,8,20,0.18);
+  transition: background 0.2s, transform 0.2s;
 }
-button:hover { background-color:#246b46; }
+button:hover { background: linear-gradient(180deg, #59d3c5, #0f1b2a); color:#fff; transform:scale(1.05);}
+.scoreboard {
+  margin-top:14px;
+  font-size:20px;
+  color:var(--accent);
+  font-weight:600;
+  background:rgba(12,18,30,0.6);
+  padding:8px 18px;
+  border-radius:10px;
+  box-shadow:0 2px 8px rgba(2,8,20,0.12);
+  display: flex;
+  justify-content: space-between;
+}
+@media (max-width:700px){
+  body {padding:8px;}
+  canvas{width:340px !important;height:180px !important;}
+  h1{font-size:1.4rem;}
+}
 </style>
 </head>
 <body>
@@ -45,7 +82,9 @@ button:hover { background-color:#246b46; }
 <div class="controls">
   <button onclick="voltarHub()">⬅ Retour au Hub</button>
 </div>
-
+<div class="scoreboard" id="scoreboard">
+  Score: <span id="scoreVal">0</span> — Meilleur: <span id="bestVal">0</span>
+</div>
 <script>
 // image du capybara
 const capyImg = new Image();
@@ -57,6 +96,9 @@ const ctx = canvas.getContext("2d");
 // scores
 let score = 0;
 let bestScore = parseInt(localStorage.getItem("capybaraBest") || "0",10);
+
+document.getElementById("scoreVal").textContent = score;
+document.getElementById("bestVal").textContent = bestScore;
 
 let gameOverFlag = false;
 
@@ -143,6 +185,8 @@ function update(){
       }
     }
   }
+  document.getElementById("scoreVal").textContent = score;
+  document.getElementById("bestVal").textContent = bestScore;
 }
 
 function gameOver(){
@@ -154,22 +198,37 @@ function gameOver(){
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // sol
+  // sol amélioré
+  ctx.save();
   ctx.fillStyle = "#654321";
-  ctx.fillRect(0,200,canvas.width,10);
+  ctx.shadowColor = "#000";
+  ctx.shadowBlur = 12;
+  ctx.fillRect(0,200,canvas.width,14);
+  ctx.restore();
 
   // capybara
   ctx.drawImage(capyImg, player.x, player.y, player.width, player.height);
 
   // obstacles
-  ctx.fillStyle="#555";
-  obstacles.forEach(o => ctx.fillRect(o.x,o.y,o.width,o.height));
+  ctx.fillStyle="#59d3c5";
+  obstacles.forEach(o => {
+    ctx.save();
+    ctx.shadowColor = "#19f0ff";
+    ctx.shadowBlur = 8;
+    ctx.fillRect(o.x,o.y,o.width,o.height);
+    ctx.restore();
+  });
 
-  // score
-  ctx.fillStyle="#000";
-  ctx.font="20px Arial";
-  ctx.fillText("Score: "+score,10,30);
-  ctx.fillText("Meilleur: "+bestScore,10,55);
+  // score affiché en haut à droite
+  ctx.save();
+  ctx.font="bold 22px Inter, Arial";
+  ctx.fillStyle= "#59d3c5";
+  ctx.textAlign="right";
+  ctx.fillText("Score: "+score,canvas.width-18,32);
+  ctx.fillStyle="#95a3b8";
+  ctx.font="16px Inter, Arial";
+  ctx.fillText("Meilleur: "+bestScore,canvas.width-18,54);
+  ctx.restore();
 }
 
 function loop(){
@@ -182,6 +241,5 @@ function voltarHub(){ window.location.href='../index.html'; }
 
 loop();
 </script>
-
 </body>
 </html>

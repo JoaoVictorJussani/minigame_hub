@@ -5,40 +5,73 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tetris</title>
 <style>
+:root {
+  --bg: #0b1020;
+  --card: #0f1724;
+  --accent: #59d3c5;
+  --muted: #95a3b8;
+}
 body {
   margin:0;
-  font-family: Arial, sans-serif;
+  font-family: Inter, Arial, sans-serif;
+  background: linear-gradient(180deg, #071021 0%, #071527 60%);
+  color:#e6f0f4;
   display:flex;
   flex-direction:column;
   align-items:center;
-  background: linear-gradient(to top, #222, #555);
-  color:#fff;
+  min-height:100%;
+  padding:24px;
 }
 h1 {
   margin-top: 20px;
   text-align:center;
+  font-size:2.2rem;
+  color: var(--accent);
+  text-shadow: 0 2px 12px #071021;
+  letter-spacing: 1px;
 }
 canvas {
-  background:#000;
+  background: linear-gradient(180deg, rgba(12, 18, 30, 0.6), rgba(6, 10, 18, 0.6));
   margin-top:20px;
-  border:3px solid #555;
-  border-radius:8px;
+  border:2.5px solid var(--accent);
+  border-radius:14px;
+  box-shadow: 0 8px 30px rgba(2,8,20,0.7);
+  display:block;
 }
 .controls {
-  margin-top:15px;
+  margin-top:18px;
+  display:flex;
+  gap:12px;
+  align-items:center;
 }
 button {
-  padding:10px 15px;
+  padding:10px 18px;
   font-weight:bold;
   border:none;
-  border-radius:8px;
+  border-radius:10px;
   cursor:pointer;
-  background-color:#2e8b57;
-  color:white;
-  font-size:16px;
-  margin:5px;
+  background: linear-gradient(180deg, #172433, #0f1b2a);
+  color: #dff7f2;
+  font-size:17px;
+  box-shadow: 0 4px 16px rgba(2,8,20,0.18);
+  transition: background 0.2s, transform 0.2s;
 }
-button:hover { background-color:#246b46; }
+button:hover { background: linear-gradient(180deg, #59d3c5, #0f1b2a); color:#fff; transform:scale(1.05);}
+.scoreboard {
+  margin-top:14px;
+  font-size:20px;
+  color:var(--accent);
+  font-weight:600;
+  background:rgba(12,18,30,0.6);
+  padding:8px 18px;
+  border-radius:10px;
+  box-shadow:0 2px 8px rgba(2,8,20,0.12);
+}
+@media (max-width:700px){
+  body {padding:8px;}
+  canvas{width:220px !important;height:400px !important;}
+  h1{font-size:1.4rem;}
+}
 </style>
 </head>
 <body>

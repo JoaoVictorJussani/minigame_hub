@@ -20,6 +20,33 @@
       padding: 0
     }
 
+
+    
+    button {
+      padding:10px 18px;
+      font-weight:bold;
+      border:none;
+      border-radius:10px;
+      cursor:pointer;
+      background: linear-gradient(180deg, #172433, #0f1b2a);
+      color: #dff7f2;
+      font-size:17px;
+      box-shadow: 0 4px 16px rgba(2,8,20,0.18);
+      transition: background 0.2s, transform 0.2s;
+    }
+    button:hover { background: linear-gradient(180deg, #59d3c5, #0f1b2a); color:#fff; transform:scale(1.05);}
+    .scoreboard {
+      margin-top:14px;
+      font-size:20px;
+      color:var(--accent);
+      font-weight:600;
+      background:rgba(12,18,30,0.6);
+      padding:8px 18px;
+      border-radius:10px;
+      box-shadow:0 2px 8px rgba(2,8,20,0.12);
+      display: flex;
+      justify-content: space-between;
+    }
     html,
     body {
       height: 100%
@@ -76,7 +103,12 @@
     #controls button:active {
       transform: translateY(1px)
     }
-
+    .hub {
+      margin-top:18px;
+      display:flex;
+      gap:12px;
+      align-items:center;
+    } 
     #footer {
       color: var(--muted);
       font-size: 12px;
@@ -158,7 +190,9 @@
   </div>
 
   <canvas id="game"></canvas>
-
+<div class="hub">
+  <button onclick="voltarHub()">⬅ Retour au Hub</button>
+</div>
 <script>
 window.ECHO_LEVELS = [
   {
@@ -547,6 +581,8 @@ window.ECHO_LEVELS = [
       if (levels.length > 0) loadLevel(0);
       else { levelInfo.textContent = 'No levels found'; }
     })();
+
+    function voltarHub(){ window.location.href='../index.html'; }
   </script>
 </body>
 

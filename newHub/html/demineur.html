@@ -6,123 +6,154 @@
     <title>Démineur</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: linear-gradient(135deg, #d0f7d0, #d0d0ff);
-            color: #222;
-            text-align: center;
-            min-height: 100vh;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            transition: background 0.5s;
-        }
-
-        header {
-            width: 100%;
-            padding: 20px 0;
-            background: linear-gradient(90deg, #d0f7d0, #a0d0ff);
-            box-shadow: 0 6px 18px rgba(0,0,0,0.2);
-            border-radius: 0 0 18px 18px;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        header h1 {
-            margin: 0;
-            font-size: 2.8rem;
-            color: #2e8b57;
-            text-shadow: 1px 1px 6px rgba(0,0,0,0.2);
-        }
-
-        #info-bar {
-            margin: 20px auto;
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: 20px;
-            font-size: 18px;
-            background: #fff;
-            border-radius: 14px;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-            padding: 12px 20px;
-            font-weight: 600;
-        }
-
-        #game {
-            display: inline-block;
-            margin: 24px auto;
-            border: 2px solid #333;
-            background: #fff;
-            box-shadow: 0 10px 32px rgba(0,0,0,0.15);
-            border-radius: 20px;
-            padding: 20px 14px 14px 14px;
-            transition: transform 0.2s, box-shadow 0.3s;
-        }
-
-        #game:hover { transform: scale(1.01); }
-
-        .cell {
-            width: 36px;
-            height: 36px;
-            display: inline-block;
-            border-radius: 8px;
-            border: 1.5px solid #888;
-            margin: 4px;
-            vertical-align: top;
-            font-size: 20px;
-            line-height: 36px;
-            cursor: pointer;
-            user-select: none;
-            background: linear-gradient(145deg, #f0f0f0, #d0ffd0);
-            font-weight: 700;
-            text-align: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            transition: transform 0.2s, background 0.3s, box-shadow 0.3s;
-        }
-
-        .cell:hover:not(.revealed):not(.flagged) {
-            transform: scale(1.1);
-            background: #c0ffc0;
-            box-shadow: 0 6px 20px rgba(46,139,87,0.2);
-        }
-
-        .cell.revealed { background: #b3ffb3; cursor: default; }
-        .cell.mine { background: #ff6666; }
-        .cell.flagged { background: #ffe680; color: #fbc02d; }
-
-        #status {
-            margin: 18px;
-            font-size: 22px;
-            font-weight: bold;
-            border-radius: 12px;
-            padding: 12px 0;
-            min-height: 32px;
-            background: #fff;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-        }
-
-        #status.win { background: #d0ffd0; color: #2e8b57; }
-        #status.lose { background: #ffd0d0; color: #c00; }
-
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            border-radius: 10px;
-            border: none;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            background: #2e8b57;
-            color: #fff;
-        }
-
-        button:hover {
-            transform: scale(1.05);
-            box-shadow: 0 6px 18px rgba(0,0,0,0.2);
-        }
+        :root {
+  --bg: #0b1020;
+  --card: #0f1724;
+  --accent: #59d3c5;
+  --muted: #95a3b8;
+}
+body {
+  font-family: Inter, Arial, sans-serif;
+  background: linear-gradient(180deg, #071021 0%, #071527 60%);
+  color: #e6f0f4;
+  text-align: center;
+  min-height: 100vh;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px;
+}
+header {
+  width: 100%;
+  padding: 24px 0 12px 0;
+  background: linear-gradient(180deg, #172433 0%, #0f1b2a 100%);
+  box-shadow: 0 6px 18px rgba(2,8,20,0.18);
+  border-radius: 0 0 18px 18px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+header h1 {
+  margin: 0;
+  font-size: 2.2rem;
+  color: var(--accent);
+  text-shadow: 0 2px 12px #071021;
+  letter-spacing: 1px;
+}
+#info-bar {
+  margin: 20px auto;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  font-size: 18px;
+  background: var(--card);
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgba(2,8,20,0.12);
+  padding: 12px 20px;
+  font-weight: 600;
+  color: var(--accent);
+}
+#game {
+  display: inline-block;
+  margin: 24px auto;
+  border: 2.5px solid var(--accent);
+  background: #0f1724;
+  box-shadow: 0 10px 32px rgba(2,8,20,0.18);
+  border-radius: 20px;
+  padding: 20px 14px 14px 14px;
+  transition: transform 0.2s, box-shadow 0.3s;
+}
+#game:hover { transform: scale(1.01); }
+.cell {
+  width: 36px;
+  height: 36px;
+  display: inline-block;
+  border-radius: 8px;
+  border: 1.5px solid #59d3c5;
+  margin: 4px;
+  vertical-align: top;
+  font-size: 20px;
+  line-height: 36px;
+  cursor: pointer;
+  user-select: none;
+  background: linear-gradient(145deg, #172433, #0f1b2a);
+  font-weight: 700;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(2,8,20,0.10);
+  transition: transform 0.2s, background 0.3s, box-shadow 0.3s;
+  color: #fff;
+}
+.cell:hover:not(.revealed):not(.flagged) {
+  transform: scale(1.1);
+  background: #59d3c5;
+  box-shadow: 0 6px 20px rgba(89,211,197,0.18);
+  color: #071021;
+}
+.cell.revealed { background: #59d3c5; color: #071021; cursor: default; }
+.cell.mine { background: #ff6666; }
+.cell.flagged { background: #ffe680; color: #fbc02d; }
+#status {
+  margin: 18px;
+  font-size: 22px;
+  font-weight: bold;
+  border-radius: 12px;
+  padding: 12px 0;
+  min-height: 32px;
+  background: var(--card);
+  box-shadow: 0 4px 16px rgba(2,8,20,0.12);
+  color: var(--accent);
+}
+#status.win { background: #d0ffd0; color: #2e8b57; }
+#status.lose { background: #ffd0d0; color: #c00; }
+button {
+  padding: 10px 18px;
+  font-size: 17px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  background: linear-gradient(180deg, #172433, #0f1b2a);
+  color: #dff7f2;
+  box-shadow: 0 4px 16px rgba(2,8,20,0.18);
+  transition: background 0.2s, transform 0.2s;
+  font-weight: bold;
+}
+button:hover {
+  background: linear-gradient(180deg, #59d3c5, #0f1b2a);
+  color: #fff;
+  transform: scale(1.05);
+}
+/* Ajout du style pour le dropdown des difficultés */
+select#difficulty {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1.5px solid var(--accent);
+  background: linear-gradient(180deg, #172433, #0f1b2a);
+  color: var(--accent);
+  font-size: 16px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(2,8,20,0.10);
+  margin-left: 8px;
+  transition: border-color 0.2s, background 0.2s;
+  outline: none;
+  cursor: pointer;
+}
+select#difficulty:focus {
+  border-color: #19f0ff;
+  background: linear-gradient(180deg, #59d3c5, #0f1b2a);
+  color: #fff;
+}
+select#difficulty option {
+  background: #0f1b2a;
+  color: var(--accent);
+  font-weight: 600;
+}
+@media (max-width:700px){
+  body {padding:8px;}
+  #game{padding:8px;}
+  header h1{font-size:1.4rem;}
+}
     </style>
 </head>
 <body>
