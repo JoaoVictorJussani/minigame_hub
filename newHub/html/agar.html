@@ -30,6 +30,11 @@
     <div id="food">Food: 0</div>
   </div>
 
+  <div class="overlay" id="leaderboard" style="right:16px;top:120px;">
+    <div style="font-weight:600;margin-bottom:6px">Leaderboard</div>
+    <div id="leaders">Loading...</div>
+  </div>
+
   <div class="center-msg" id="msg">
     <div id="msgText">Game Over</div>
     <div style="margin-top:10px;text-align:center"><button id="playAgain">Jouer encore</button></div>
@@ -67,16 +72,53 @@
 
     function massToRadius(m){ return Math.max(6, Math.sqrt(m/Math.PI)*2.6) }
 
+    // bot speed scaling: larger bots should move slower (clamped)
+    function botSpeedFactor(mass){
+      // reduces speed as mass grows; clamp so very large bots still move a little
+      return Math.max(0.25, 1 - Math.log(mass + 1) * 0.06);
+    }
+
     // Bots
-    const BOT_COUNT = 140; // tune for perf
-    const bots = [];
-    for(let i=0;i<BOT_COUNT;i++) bots.push(spawnBot());
+  const BOT_COUNT = 140; // tune for perf
+  const bots = [];
+  // declare food constants early so placement helper can reference the array
+  const FOOD_COUNT = 120;
+  const foods = [];
+
+    // find a position that is not too close to other entities (bots, foods, player, shards)
+    function findSafePosition(radius, maxAttempts = 40){
+      const margin = Math.max(12, radius + 6);
+      for(let attempt = 0; attempt < maxAttempts; attempt++){
+        const x = rand(margin, WIDTH() - margin);
+        const y = rand(margin, HEIGHT() - margin);
+        let ok = true;
+        // check against player
+        if(dist({x,y}, mainPlayer) < (massToRadius(mainPlayer.mass) + radius + 6)) ok = false;
+        // check against shards
+        if(ok){
+          for(const s of shards){ if(dist({x,y}, s) < (massToRadius(s.mass) + radius + 6)){ ok = false; break; } }
+        }
+        // check against existing bots
+        if(ok){
+          for(const b of bots){ if(dist({x,y}, b) < (massToRadius(b.mass) + radius + 6)){ ok = false; break; } }
+        }
+        // check against foods
+        if(ok){
+          for(const f of foods){ const fr = Math.max(2, Math.sqrt(f.mass/Math.PI)*1.6); if(dist({x,y}, f) < (fr + radius + 4)){ ok = false; break; } }
+        }
+        if(ok) return {x,y};
+      }
+      // fallback: return a random position (can't find safe spot)
+      return { x: rand(20, WIDTH()-20), y: rand(20, HEIGHT()-20) };
+    }
 
     function spawnBot(){
       const m = rand(8, 160);
+      const r = massToRadius(m);
+      const p = findSafePosition(r);
       return {
-        x: rand(20, WIDTH()-20),
-        y: rand(20, HEIGHT()-20),
+        x: p.x,
+        y: p.y,
         mass: m,
         color: `hsl(${Math.floor(rand(0,360))}deg 80% 60%)`,
         dir: rand(0,Math.PI*2),
@@ -86,18 +128,23 @@
       };
     }
 
+    // initialize bots (after spawnBot and findSafePosition are available)
+    for(let i=0;i<BOT_COUNT;i++) bots.push(spawnBot());
+
     // Food pellets
-    const FOOD_COUNT = 120;
-    const foods = [];
     function spawnFood(){
+      const m = Math.round(rand(2, 10));
+      // approximate radius used in drawList for foods
+      const r = Math.max(2, Math.sqrt(m/Math.PI)*1.6);
+      const p = findSafePosition(r);
       return {
-        x: rand(12, WIDTH()-12),
-        y: rand(12, HEIGHT()-12),
-        mass: Math.round(rand(2, 10)),
+        x: p.x,
+        y: p.y,
+        mass: m,
         color: `hsl(${Math.floor(rand(80,140))}deg 60% ${Math.floor(rand(45,65))}%)`
       };
     }
-    // initialize foods
+    // initialize foods (moved population after spawn helpers so safe-placement works)
     for(let i=0;i<FOOD_COUNT;i++) foods.push(spawnFood());
 
     // Input
@@ -109,6 +156,7 @@
   const massEl = document.getElementById('mass');
   const botsEl = document.getElementById('bots');
   const foodEl = document.getElementById('food');
+  const leadersEl = document.getElementById('leaders');
 
     let running = true;
 
@@ -124,14 +172,20 @@
       let dx = mouse.x - mainPlayer.x, dy = mouse.y - mainPlayer.y;
       const dlen = Math.hypot(dx,dy) || 1;
       dx /= dlen; dy /= dlen;
-      const speed = clamp(10 - Math.log(shardMass+1)*1.5, 4, 12);
+      // initial shard speed should scale with its size: larger shards move slower
+      // reuse botSpeedFactor so shard speed is consistent with bot movement scaling
+      const baseSplitSpeed = 6; // tuned baseline
+      const speed = clamp(baseSplitSpeed * botSpeedFactor(shardMass), 2, 12);
+      // incorporate some of the player's current velocity so split feels natural
+      const inheritVx = mainPlayer.vx * 0.5;
+      const inheritVy = mainPlayer.vy * 0.5;
       const shard = {
         x: mainPlayer.x + dx * (massToRadius(mainPlayer.mass)+8),
         y: mainPlayer.y + dy * (massToRadius(mainPlayer.mass)+8),
         mass: shardMass,
         color: mainPlayer.color,
-        vx: dx * speed,
-        vy: dy * speed,
+        vx: dx * speed + inheritVx,
+        vy: dy * speed + inheritVy,
         age: 0,
         life: SHARD_LIFETIME,
         canMerge: false
@@ -158,17 +212,41 @@
   // shards movement & aging
       for(let i=shards.length-1;i>=0;i--){
         const s = shards[i];
-        s.x += s.vx; s.y += s.vy;
-        // slight damping
-        s.vx *= 0.995; s.vy *= 0.995;
+        // age the shard (age in ms)
         s.age += dt*1000;
         if(s.age >= s.life) s.canMerge = true;
-        // keep on screen
-        if(s.x < 6) s.x = WIDTH()-6;
-        if(s.x > WIDTH()-6) s.x = 6;
-        if(s.y < 6) s.y = HEIGHT()-6;
-        if(s.y > HEIGHT()-6) s.y = 6;
-        // try merge if allowed
+
+        if(!s.canMerge){
+          // While shard is active after split, use the same movement model as the main player
+          // so it follows the mouse at a similar, mass-scaled speed.
+          const sMaxSpeed = Math.max(0.6, 4.6 - Math.log(s.mass+1)*0.6);
+          const ax = (mouse.x - s.x) * 0.06;
+          const ay = (mouse.y - s.y) * 0.06;
+          s.vx += ax * 0.6; s.vy += ay * 0.6;
+          s.vx *= 0.92; s.vy *= 0.92;
+          let spd = Math.hypot(s.vx, s.vy);
+          if(spd > sMaxSpeed){ s.vx = (s.vx / spd) * sMaxSpeed; s.vy = (s.vy / spd) * sMaxSpeed; }
+          s.x += s.vx; s.y += s.vy;
+        } else {
+          // When shard can merge, actively move back toward the main player to rejoin
+          const dx = mainPlayer.x - s.x, dy = mainPlayer.y - s.y;
+          const dlen = Math.hypot(dx,dy) || 1;
+          const dirx = dx / dlen, diry = dy / dlen;
+          // approach speed increases slightly with shard size but is clamped
+          const approachSpeed = clamp(1.2 + Math.log(s.mass+1) * 0.18, 0.8, 6);
+          s.vx = dirx * approachSpeed;
+          s.vy = diry * approachSpeed;
+          s.x += s.vx; s.y += s.vy;
+        }
+
+  // wrap using radius-based margins to avoid ping-ponging on the edges
+  const sr = massToRadius(s.mass);
+  if(s.x < -sr) s.x = WIDTH() + sr;
+  if(s.x > WIDTH() + sr) s.x = -sr;
+  if(s.y < -sr) s.y = HEIGHT() + sr;
+  if(s.y > HEIGHT() + sr) s.y = -sr;
+
+        // try merge if allowed (close enough to main player)
         if(s.canMerge){
           const d = dist(s, mainPlayer);
           if(d < massToRadius(mainPlayer.mass) + massToRadius(s.mass) + 8){
@@ -227,42 +305,48 @@
           const d = dist(b, other);
           if(other.mass < b.mass * 0.9 && d < nearestTargetDist){ nearestTarget = other; nearestTargetDist = d; }
         }
-
-        // detect threats (only flee from much larger pieces)
+        // detect threats (only flee from much larger bots or shards) -- do NOT flee from the main player
         let nearestThreat = null; let threatDist = 1e9;
-        for(const p of pieces){
-          const d = dist(b, p);
-          if(p.mass > b.mass * 1.6 && d < threatDist){ nearestThreat = p; threatDist = d; }
+        // check other bots as threats
+        for(const other of bots){
+          if(other === b) continue;
+          const d = dist(b, other);
+          if(other.mass > b.mass * 1.6 && d < threatDist){ nearestThreat = other; threatDist = d; }
         }
+        // check shards as potential threats (but skip mainPlayer intentionally)
+        for(const s of shards){ const d = dist(b, s); if(s.mass > b.mass * 1.6 && d < threatDist){ nearestThreat = s; threatDist = d; } }
+
+        const speedFactor = botSpeedFactor(b.mass);
 
         if(nearestThreat && threatDist < 220){
-          // flee from threat but not too fast
+          // flee from threat (other bots/shards) using reduced speed for heavy bots
           const dx = b.x - nearestThreat.x, dy = b.y - nearestThreat.y;
           const ang = Math.atan2(dy, dx);
           b.dir = ang + rand(-0.3,0.3);
-          const fleeSpeed = 1.0 + Math.log(b.mass+1)*0.02;
+          const fleeSpeed = 1.0 * speedFactor;
           b.x += Math.cos(b.dir) * fleeSpeed;
           b.y += Math.sin(b.dir) * fleeSpeed;
         } else if(nearestTarget && nearestTargetDist < 600){
-          // chase target moderately
+          // chase target moderately (bigger bots chase slower)
           const dx = nearestTarget.x - b.x, dy = nearestTarget.y - b.y;
           const ang = Math.atan2(dy, dx);
           b.dir = ang + rand(-0.12,0.12);
-          const sp = 0.5 + (Math.log(b.mass+1)*0.03) + (nearestTarget.mass < b.mass ? 0.45 : 0);
+          const sp = (0.9 + (nearestTarget.mass < b.mass ? 0.25 : 0)) * speedFactor;
           b.x += Math.cos(b.dir) * sp;
           b.y += Math.sin(b.dir) * sp;
         } else {
-          // wander
+          // wander (slower when heavier)
           b.dir += rand(-0.2,0.2);
-          b.x += Math.cos(b.dir) * b.speed * (1 + Math.log(b.mass+1)*0.015);
-          b.y += Math.sin(b.dir) * b.speed * (1 + Math.log(b.mass+1)*0.015);
+          b.x += Math.cos(b.dir) * b.speed * speedFactor;
+          b.y += Math.sin(b.dir) * b.speed * speedFactor;
         }
 
-        // clamp
-        if(b.x < 10) b.x = WIDTH()-10;
-        if(b.x > WIDTH()-10) b.x = 10;
-        if(b.y < 10) b.y = HEIGHT()-10;
-        if(b.y > HEIGHT()-10) b.y = 10;
+  // wrap using radius-based margins to avoid getting stuck on edges
+  const br = massToRadius(b.mass);
+  if(b.x < -br) b.x = WIDTH() + br;
+  if(b.x > WIDTH() + br) b.x = -br;
+  if(b.y < -br) b.y = HEIGHT() + br;
+  if(b.y > HEIGHT() + br) b.y = -br;
       }
 
   // collisions & eating
@@ -329,6 +413,15 @@
   massEl.textContent = 'Mass: ' + Math.round(mainPlayer.mass) + (shards.length ? (' (+ ' + shards.length + ' shards)') : '');
   botsEl.textContent = 'Bots: ' + bots.length;
   if(foodEl) foodEl.textContent = 'Food: ' + foods.length;
+  // update leaderboard (top 5 by mass)
+  if(leadersEl){
+    const list = [];
+    list.push({name:'You', mass: mainPlayer.mass});
+    for(let i=0;i<bots.length;i++) list.push({name: 'Bot', mass: bots[i].mass});
+    list.sort((a,b) => b.mass - a.mass);
+    const top = list.slice(0,5);
+    leadersEl.innerHTML = top.map((e,idx) => `${idx+1}. ${e.name} — ${Math.round(e.mass)}`).join('<br>');
+  }
     }
 
     function draw(){
