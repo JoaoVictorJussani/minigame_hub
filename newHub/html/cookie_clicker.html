@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="fr-FR">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width,initial-scale=1" />
+	<title>Cookie Clicker - Mini</title>
+	<style>
+		:root{
+			--bg-1: #071021;
+			--bg-2: #0f1a2b;
+			--neon-pink: #ff4fcc;
+			--neon-cyan: #19f0ff;
+			--neon-green: #7cff7c;
+			--muted: rgba(255,255,255,0.85);
+			--glass: rgba(255,255,255,0.04);
+			--card-bg: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+		}
+
+		*{box-sizing:border-box}
+		body{
+			font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+			margin:0;
+			min-height:100vh;
+			background:
+				radial-gradient(1200px 600px at 10% 10%, rgba(25,10,50,0.22), transparent),
+				linear-gradient(180deg,var(--bg-1), var(--bg-2));
+			color:var(--muted);
+			-webkit-font-smoothing:antialiased;
+			display:flex;
+			align-items:center;
+			justify-content:center;
+			padding:32px;
+		}
+
+		/* optional decorative blurred shapes to mirror index (kept purely in CSS so no extra HTML needed) */
+		body::before, body::after{
+			content:"";
+			position:fixed;
+			pointer-events:none;
+			filter:blur(60px);
+			opacity:0.5;
+			z-index:0;
+		}
+		body::before{
+			width:520px; height:520px; left:2%; top:-8%;
+			background:linear-gradient(45deg,var(--neon-pink), var(--neon-cyan));
+			transform:translateZ(0);
+		}
+		body::after{
+			width:420px; height:420px; right:-6%; bottom:-10%;
+			background:linear-gradient(45deg,var(--neon-green), var(--neon-cyan));
+			transform:translateZ(0);
+		}
+
+		/* container/card like in index */
+		.container{
+			width:920px;
+			max-width:95%;
+			display:flex;
+			gap:20px;
+			align-items:flex-start;
+			position:relative;
+			z-index:2;
+		}
+
+		.left, .right{ border-radius:12px; box-shadow:0 18px 40px rgba(2,6,23,0.6); background:var(--card-bg); border:1px solid rgba(255,255,255,0.03); }
+
+		.left{
+			flex:1;
+			text-align:center;
+			padding:20px;
+			min-width:360px;
+		}
+
+		.right{
+			/* largura aumentada para acomodar elementos maiores */
+			width:720px;
+			padding:22px;
+			display:flex;
+			flex-direction:column;
+			gap:14px;
+		}
+
+		.cookie-num{ font-size:20px; font-weight:700; margin-bottom:8px; color:#fff }
+		.big-num{ font-size:28px; font-weight:800; color:var(--neon-cyan) }
+
+		/* cookie button kept circular but with glassy/neon accent */
+		.cookie-btn{
+			width:260px; height:260px; margin:16px auto; border-radius:16px;
+			border-radius:50%;
+			background: radial-gradient(circle at 30% 30%, #ffefc2, #f1c27d 40%, #d68a2a 100%);
+			box-shadow:
+				0 10px 30px rgba(0,0,0,0.6),
+				0 0 28px rgba(25,240,255,0.04);
+			display:flex; align-items:center; justify-content:center;
+			cursor:pointer; user-select:none; transition:transform 0.08s ease, box-shadow .18s;
+			position:relative;
+		}
+		.cookie-btn:active{ transform:scale(0.96); box-shadow:0 6px 20px rgba(0,0,0,0.6); }
+
+		.info{ display:flex; justify-content:space-between; margin-top:8px; color:rgba(255,255,255,0.7); font-size:14px }
+
+		.items{ display:flex; flex-direction:column; gap:10px; margin-top:6px; }
+
+		.item{
+			display:flex; justify-content:space-between; align-items:center;
+			padding:8px; border-radius:10px;
+			background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.002));
+			border:1px solid rgba(255,255,255,0.025);
+			font-size:0.95rem;
+		}
+
+		.item .left{ text-align:left; }
+		.small{ font-size:13px; color:rgba(255,255,255,0.78) }
+
+		/* preço como badge mais discreto */
+		.item .meta { display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+		.price-badge{
+			background:rgba(0,0,0,0.03); padding:6px 8px; border-radius:8px;
+			font-weight:700; color:var(--muted); border:1px solid rgba(255,255,255,0.02); font-size:0.85rem;
+		}
+
+		/* botões mais compactos */
+		button.buy{
+			background:linear-gradient(90deg,var(--neon-cyan), #6aaef8);
+			color:#071021; border:0; padding:8px 10px; border-radius:12px; cursor:pointer; font-weight:700;
+			display:inline-flex; gap:8px; align-items:center; box-shadow:0 10px 28px rgba(25,240,255,0.06);
+			transition:transform .12s ease, box-shadow .12s ease, opacity .12s;
+			font-size:0.93rem;
+		}
+		button.buy:hover:not(:disabled){ transform:translateY(-2px); box-shadow:0 16px 40px rgba(25,240,255,0.10); }
+		button.buy:disabled{ opacity:0.82; }
+
+		/* botões de controle superiores */
+		#saveBtn, #resetBtn{ padding:10px 14px; border-radius:12px; font-weight:800; display:inline-flex; gap:8px; align-items:center; font-size:0.95rem; }
+
+		/* log maior e mais alto */
+		#log.small{ margin-top:8px; max-height:180px !important; overflow:auto; font-size:0.95rem; color:rgba(255,255,255,0.85); padding-right:4px; }
+
+		/* ajustar pequenas infos na esquerda quando a direita está maior */
+		.stats-row .stat{ padding:8px 12px; border-radius:10px; font-weight:700; font-size:0.95rem; }
+
+		/* responsive tweaks: garantir que em telas menores a direita não fiche apertada */
+		@media (max-width:980px){
+			.container{ flex-direction:column; align-items:center; padding:20px; }
+			.right{ width:100%; max-width:760px; padding:16px; }
+			.cookie-btn{ width:220px; height:220px }
+			.item{ padding:10px; font-size:0.95rem }
+			button.buy{ padding:8px 10px; font-size:0.92rem }
+			#log.small{ max-height:160px !important; }
+		}
+
+		/* dark theme toggle (same override as index.html) */
+		body.dark{
+			--bg-1: #f6f8ff;
+			--bg-2: #ffffff;
+			--muted: rgba(5,10,20,0.9);
+			--glass: rgba(2,6,23,0.03);
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<div class="left">
+			<div class="cookie-num">Cookies : <span id="cookies" class="big-num">0</span></div>
+			<div id="cookieBtn" class="cookie-btn" title="Cliquez pour gagner des cookies" tabindex="0" role="button" aria-pressed="false">
+				<!-- cookie face minimal -->
+				<svg width="140" height="140" viewBox="0 0 64 64" aria-hidden>
+					<circle cx="32" cy="32" r="30" fill="rgba(0,0,0,0.06)"></circle>
+					<circle cx="22" cy="24" r="3.2" fill="#6b3b1a"></circle>
+					<circle cx="36" cy="28" r="3.6" fill="#6b3b1a"></circle>
+					<path d="M22 38c3 3 10 3 14 0" stroke="#6b3b1a" stroke-width="1.5" fill="none" stroke-linecap="round"></path>
+				</svg>
+			</div>
+
+			<div class="info">
+				<div>CPS : <span id="cps">0.00</span></div>
+				<div>Par clic : <span id="perClick">1</span></div>
+			</div>
+
+			<div class="stats-row" aria-hidden="true">
+				<div class="stat">Total gagné : <span id="totalCookies">0</span></div>
+				<div class="stat">Meilleur CPS : <span id="bestCPS">0.00</span></div>
+			</div>
+
+			<div class="footer">Astuce : appuyez sur Espace pour cliquer. La partie est sauvegardée automatiquement.</div>
+		</div>
+
+		<div class="right">
+			<div class="topbar">
+				<strong>Boutique</strong>
+				<div class="controls">
+					<button id="saveBtn" title="Sauvegarder la partie">💾 Sauvegarder</button>
+					<button id="resetBtn" title="Réinitialiser la partie">♻️ Réinitialiser</button>
+				</div>
+			</div>
+
+			<div class="items" id="items">
+				<!-- items gerados por JS -->
+			</div>
+
+		</div>
+	</div>
+
+	<script>
+		// Estado do jogo
+		const defaultState = {
+			cookies: 0,
+			totalCookies: 0,
+			perClick: 1,
+			bestCPS: 0,
+			items: [
+				{ id: 'cursor', name: 'Curseur', baseCost: 15, qty: 0, cps: 0.1 },
+				{ id: 'grandma', name: 'Grand-mère', baseCost: 100, qty: 0, cps: 1 },
+				{ id: 'farm', name: 'Ferme', baseCost: 1100, qty: 0, cps: 8 }
+			],
+			lastTick: Date.now()
+		};
+
+		let state = loadState();
+
+		// helpers
+		function fmt(n) {
+			// show two decimals for small/fractional numbers, big-number suffixes otherwise
+			if (!isFinite(n)) return '0';
+			if (Math.abs(n) < 1000) {
+				// if integer, show as integer, else 2 decimals
+				return (Math.abs(n) % 1 === 0) ? String(Math.floor(n)) : n.toFixed(2);
+			}
+			if (n >= 1e9) return (n/1e9).toFixed(2) + 'B';
+			if (n >= 1e6) return (n/1e6).toFixed(2) + 'M';
+			if (n >= 1e3) return (n/1e3).toFixed(2) + 'K';
+			return Math.floor(n).toString();
+		}
+
+		function itemCost(item) {
+			return Math.ceil(item.baseCost * Math.pow(1.15, item.qty));
+		}
+
+		function totalCPS() {
+			// soma defensiva — garante number e evita NaN caso algum item faltante
+			return state.items.reduce((s, it) => {
+				const qty = Number(it.qty) || 0;
+				const cps = Number(it.cps) || 0;
+				return s + qty * cps;
+			}, 0);
+		}
+
+		// salvar / carregar
+		function saveState() {
+			localStorage.setItem('mini_cookie_state_v1', JSON.stringify(state));
+		}
+		function loadState() {
+			try {
+				const raw = localStorage.getItem('mini_cookie_state_v1');
+				if (!raw) return JSON.parse(JSON.stringify(defaultState));
+
+				const parsed = JSON.parse(raw);
+
+				// garantir campos básicos
+				const result = {
+					cookies: Number(parsed.cookies) || 0,
+					totalCookies: Number(parsed.totalCookies) || 0,
+					perClick: Number(parsed.perClick) || defaultState.perClick,
+					bestCPS: Number(parsed.bestCPS) || 0,
+					lastTick: parsed.lastTick || Date.now(),
+					items: []
+				};
+
+				// merge item por id com defaultState.items para garantir baseCost, cps, name
+				const savedItemsById = (parsed.items || []).reduce((m, it) => {
+					if (it && it.id) m[it.id] = it;
+					return m;
+				}, {});
+				defaultState.items.forEach(d => {
+					const s = savedItemsById[d.id] || {};
+					result.items.push({
+						id: d.id,
+						name: d.name || d.id,
+						baseCost: Number(s.baseCost ?? d.baseCost) || d.baseCost,
+						qty: Number(s.qty) || 0,
+						cps: Number(s.cps ?? d.cps) || d.cps
+					});
+				});
+
+				return result;
+			} catch (e) {
+				return JSON.parse(JSON.stringify(defaultState));
+			}
+		}
+		function resetState() {
+			if (!confirm('Êtes-vous sûr de vouloir réinitialiser la partie ?')) return;
+			state = JSON.parse(JSON.stringify(defaultState));
+			state.lastTick = Date.now();
+			saveState();
+			renderAll();
+		}
+
+		// animação visual mínima - agora anexa ao botão do cookie para garantir stacking/posição correcta
+		function animatePulse() {
+			const btn = document.getElementById('cookieBtn');
+			if (!btn) return;
+			const p = document.createElement('div');
+			p.className = 'pulse';
+			// colocar relativo ao botão
+			p.style.position = 'absolute';
+			p.style.left = '50%';
+			p.style.top = '50%';
+			p.style.transform = 'translate(-50%,-50%) scale(1)';
+			p.style.pointerEvents = 'none';
+			const size = 24 + Math.random()*30;
+			p.style.width = p.style.height = size + 'px';
+			p.style.background = 'rgba(255,255,255,0.6)';
+			p.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)';
+			p.style.borderRadius = '50%';
+			p.style.transition = 'transform 600ms ease, opacity 600ms ease';
+			p.style.zIndex = '6';
+			btn.appendChild(p);
+			// animar a partir do centro do botão
+			requestAnimationFrame(()=> {
+				p.style.transform = 'translate(-50%,-50%) scale(2.3)';
+				p.style.opacity = '0';
+			});
+			setTimeout(()=> {
+				p.remove();
+			}, 650);
+		}
+
+		// eventos UI - textos em francês já ajustados
+		const cookieBtn = document.getElementById('cookieBtn');
+		cookieBtn.addEventListener('click', ()=> clickCookie(state.perClick));
+		cookieBtn.addEventListener('keydown', (e)=> { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); clickCookie(state.perClick); } });
+
+		document.addEventListener('keydown', (e) => { if (e.code === 'Space') { e.preventDefault(); clickCookie(state.perClick); } });
+
+		document.getElementById('saveBtn').addEventListener('click', saveState);
+		document.getElementById('resetBtn').addEventListener('click', resetState);
+
+		// timers
+		renderAll();
+		setInterval(tick, 200);
+		setInterval(saveState, 5000);
+		window.addEventListener('beforeunload', saveState);
+
+		renderAll();
+	</script>
+</body>
+</html>
