@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Boss Fight</title>
+    <style>
+        :root{--bg:#071021;--accent:#ff4fcc;--accent2:#19f0ff}
+        html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Roboto,Arial}
+        body{background:linear-gradient(180deg,#071021,#0f1a2b);color:#fff;display:flex;flex-direction:column;align-items:center;}
+        header{width:100%;padding:14px 20px;box-sizing:border-box;display:flex;align-items:center;gap:12px}
+        a.back{color:#fff;text-decoration:none;padding:8px 12px;border:1px solid rgba(255,255,255,0.06);border-radius:8px;background:rgba(255,255,255,0.02)}
+        .wrap{max-width:980px;width:100%;padding:12px}
+        .panel{display:flex;gap:16px;align-items:flex-start}
+        #game{background:#02101a;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,0.6);}
+        #hud{display:flex;flex-direction:column;gap:8px;width:260px}
+        .stat{background:rgba(255,255,255,0.03);padding:10px;border-radius:8px}
+        canvas{display:block}
+        .controls{font-size:0.9rem;color:rgba(255,255,255,0.8);margin-top:10px}
+        .bar{height:10px;background:rgba(255,255,255,0.08);border-radius:6px;overflow:hidden}
+        .bar > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));width:100%}
+        .center{display:flex;align-items:center;justify-content:center}
+        button{background:var(--accent);border:0;color:#071021;padding:8px 12px;border-radius:8px;cursor:pointer}
+    </style>
+</head>
+<body>
+    <header>
+        <a class="back" href="../index.html">← Retour au Hub</a>
+        <h2 style="margin:0">Boss Fight</h2>
+    </header>
+    <div class="wrap">
+        <div class="panel">
+            <div id="game">
+                <canvas id="c" width="700" height="420"></canvas>
+                <div class="controls center">
+                    <div>Contrôles: ← → pour se déplacer — Espace pour tirer — R pour recommencer</div>
+                </div>
+            </div>
+            <div id="hud">
+                <div class="stat">
+                    <div style="font-weight:600">Boss</div>
+                    <div class="bar" style="margin-top:8px"><i id="bossBar"></i></div>
+                </div>
+                <div class="stat">
+                    <div style="font-weight:600">Vous</div>
+                    <div class="bar" style="margin-top:8px"><i id="playerBar" style="width:100%"></i></div>
+                </div>
+                <div class="stat center">
+                    <button id="restart">Recommencer</button>
+                </div>
+                <div class="stat">
+                    <div style="font-weight:600">Astuce</div>
+                    <div style="margin-top:6px;color:rgba(255,255,255,0.7)">Tirez sur le boss, évitez ses projectiles. Visez la tête pour infliger plus de dégâts.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function(){
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width, H = canvas.height;
+
+        // Entities
+        const player = {x: W/2, y: H-28, w:36, h:18, speed:4, hp:100};
+        const boss = {x: W/2-80, y:40, w:160, h:48, hp:200, dir:1, speed:1.2};
+        let bullets = [], enemyBullets = [];
+        let keys = {}, lastShot = 0, lastEnemyShot = 0, gameOver=false, win=false;
+
+        const bossBar = document.getElementById('bossBar');
+        const playerBar = document.getElementById('playerBar');
+
+        function reset(){
+            player.x = W/2; player.hp = 100; boss.hp = 200; bullets = []; enemyBullets = []; gameOver=false; win=false;
+            boss.x = W/2-80; boss.dir = 1; lastShot = performance.now(); lastEnemyShot = performance.now();
+            updateBars();
+        }
+
+        function updateBars(){
+            bossBar.style.width = Math.max(0, (boss.hp/200)*100) + '%';
+            playerBar.style.width = Math.max(0, (player.hp/100)*100) + '%';
+        }
+
+        function spawnEnemyBullet(){
+            const ex = boss.x + boss.w*Math.random();
+            enemyBullets.push({x:ex,y:boss.y+boss.h, vx:(player.x-ex)/120, vy:2.6, r:5});
+        }
+
+        function shoot(){
+            bullets.push({x: player.x, y: player.y-8, vy:-6, r:4});
+        }
+
+        function update(dt){
+            if(gameOver) return;
+            // player movement
+            if(keys['ArrowLeft']) player.x -= player.speed;
+            if(keys['ArrowRight']) player.x += player.speed;
+            player.x = Math.max(player.w/2, Math.min(W-player.w/2, player.x));
+
+            // shoot
+            if(keys[' '] && performance.now() - lastShot > 220){ shoot(); lastShot = performance.now(); }
+
+            // bullets
+            bullets.forEach(b=>{ b.x += 0; b.y += b.vy; });
+            bullets = bullets.filter(b=>b.y> -10);
+
+            // enemy movement
+            boss.x += boss.speed * boss.dir;
+            if(boss.x < 16) boss.dir = 1;
+            if(boss.x + boss.w > W-16) boss.dir = -1;
+
+            // enemy shooting
+            if(performance.now() - lastEnemyShot > 700){ spawnEnemyBullet(); lastEnemyShot = performance.now(); }
+            enemyBullets.forEach(b=>{ b.x += b.vx; b.y += b.vy; });
+            enemyBullets = enemyBullets.filter(b=>b.y < H+20 && b.x > -20 && b.x < W+20);
+
+            // collisions: bullets -> boss
+            bullets.forEach(b=>{
+                if(b.x > boss.x && b.x < boss.x + boss.w && b.y > boss.y && b.y < boss.y + boss.h){
+                    // hit
+                    boss.hp -= 8 + (Math.abs((b.x - (boss.x + boss.w/2))) < boss.w*0.35 ? 6 : 0); // center hits more
+                    b.y = -999; // remove
+                }
+            });
+
+            // enemy bullets -> player
+            enemyBullets.forEach(b=>{
+                if(b.x > player.x - player.w/2 && b.x < player.x + player.w/2 && b.y > player.y - player.h/2 && b.y < player.y + player.h/2){
+                    player.hp -= 8; b.y = H+999;
+                }
+            });
+
+            updateBars();
+
+            if(boss.hp <= 0){ win=true; gameOver=true; }
+            if(player.hp <= 0){ win=false; gameOver=true; }
+        }
+
+        function draw(){
+            ctx.clearRect(0,0,W,H);
+            // background grid
+            ctx.fillStyle = '#021825'; ctx.fillRect(0,0,W,H);
+
+            // boss
+            ctx.fillStyle = '#ff5aa6'; ctx.fillRect(boss.x, boss.y, boss.w, boss.h);
+            // boss eyes
+            ctx.fillStyle = '#071021'; ctx.fillRect(boss.x + 20, boss.y+12, 18, 8);
+            ctx.fillRect(boss.x + boss.w - 38, boss.y+12, 18, 8);
+
+            // player
+            ctx.fillStyle = '#19f0ff'; ctx.fillRect(player.x - player.w/2, player.y - player.h/2, player.w, player.h);
+
+            // bullets
+            ctx.fillStyle = '#fff'; bullets.forEach(b=>{ ctx.beginPath(); ctx.arc(b.x, b.y, b.r,0,Math.PI*2); ctx.fill(); });
+            ctx.fillStyle = '#ffd86b'; enemyBullets.forEach(b=>{ ctx.beginPath(); ctx.arc(b.x, b.y, b.r,0,Math.PI*2); ctx.fill(); });
+
+            if(gameOver){
+                ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0,0,W,H);
+                ctx.fillStyle = '#fff'; ctx.font='28px system-ui'; ctx.textAlign='center';
+                ctx.fillText(win? 'Victoire !' : 'Défaite', W/2, H/2 - 8);
+                ctx.font='14px system-ui'; ctx.fillText('Appuyez sur R pour rejouer', W/2, H/2 + 18);
+            }
+        }
+
+        let last = performance.now();
+        function loop(ts){
+            const dt = ts - last; last = ts;
+            update(dt); draw();
+            requestAnimationFrame(loop);
+        }
+
+        // input
+        window.addEventListener('keydown', (e)=>{ keys[e.key] = true; if(e.key === 'r' || e.key === 'R'){ reset(); } });
+        window.addEventListener('keyup', (e)=>{ keys[e.key] = false; });
+
+        document.getElementById('restart').addEventListener('click', reset);
+        reset(); requestAnimationFrame(loop);
+    })();
+    </script>
+</body>
+</html>

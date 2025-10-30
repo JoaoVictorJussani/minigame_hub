@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Car Race — Hub de Jeux</title>
+    <style>
+        :root{--bg:#071021;--accent:#ff4f4f;--hud:#19f0ff}
+        html,body{height:100%;margin:0;background:linear-gradient(180deg,#071021,#081428);color:#fff;font-family:Inter,Segoe UI,Roboto,Arial}
+        .wrap{display:flex;flex-direction:column;height:100vh}
+        header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px}
+        header a{color:var(--hud);text-decoration:none;font-weight:600}
+        #gameArea{flex:1;display:flex;align-items:center;justify-content:center;padding:8px}
+        canvas{background:linear-gradient(180deg,#0b2136,#04111a);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,0.6)}
+        .hud{position:absolute;left:16px;top:16px;font-size:16px;color:var(--hud);background:rgba(0,0,0,0.18);padding:6px 10px;border-radius:10px}
+        .controls{position:absolute;right:16px;bottom:18px;display:flex;gap:10px}
+        .btn{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.04);padding:10px 12px;border-radius:10px;color:#fff;font-weight:600;user-select:none}
+        .mobile-controls{display:none}
+        .center{display:flex;align-items:center;gap:8px}
+        .overlay{position:relative}
+        .footer{padding:10px 14px;text-align:center;color:rgba(255,255,255,0.6);font-size:13px}
+        @media (max-width:640px){ .mobile-controls{display:flex} .controls{display:none} canvas{width:320px;height:568px} }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <header>
+            <a href="..\index.html">← Retour au Hub</a>
+            <div class="center"><div style="font-weight:700">Car Race</div><div style="color:rgba(255,255,255,0.6);margin-left:8px">— Évite la circulation</div></div>
+            <div></div>
+        </header>
+
+        <div id="gameArea">
+            <div class="overlay">
+                <div class="hud" id="hud">Score: 0</div>
+                <canvas id="game" width="360" height="640" aria-label="Car Race game canvas"></canvas>
+                <div class="controls" aria-hidden="true">
+                    <button class="btn" id="leftBtn">◀</button>
+                    <button class="btn" id="rightBtn">▶</button>
+                    <button class="btn" id="restartBtn">Restart</button>
+                </div>
+                <div class="mobile-controls" style="position:absolute;left:16px;bottom:16px">
+                    <button class="btn" id="mLeft">◀</button>
+                    <button class="btn" id="mRight">▶</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">Controls: ← → or A/D. On mobile, use the on-screen buttons.</div>
+    </div>
+
+<script>
+// Simple top-down car dodger
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+let W = canvas.width, H = canvas.height;
+const hud = document.getElementById('hud');
+let leftPressed=false, rightPressed=false;
+let running = true;
+
+function resizeToCSSSize(){
+    // keep internal resolution stable, fit to CSS when needed
+}
+
+// player
+const player = { w:44, h:80, x: (W-44)/2, y: H-100, speed: 5 };
+let obstacles = [];
+let spawnTimer=0; let spawnInterval=90; let frame=0; let score=0; let speedMult=1;
+
+function spawnObstacle(){
+    const ow = 60 + Math.random()*60;
+    const ox = Math.max(12, Math.random()*(W-ow-24));
+    const os = 2.2 + Math.random()*1.6 + speedMult*0.4;
+    obstacles.push({x:ox,w:ow,y:-100,h:40,spd:os});
+}
+
+function update(){
+    frame++;
+    // input
+    if(leftPressed) player.x -= player.speed*1.2;
+    if(rightPressed) player.x += player.speed*1.2;
+    // clamp
+    player.x = Math.max(8, Math.min(W - player.w - 8, player.x));
+
+    // spawn
+    spawnTimer++;
+    if(spawnTimer >= spawnInterval){ spawnTimer=0; spawnObstacle(); }
+
+    // update obstacles
+    for(let i=obstacles.length-1;i>=0;i--){
+        const o = obstacles[i];
+        o.y += o.spd * (1 + speedMult*0.06);
+        if(o.y > H+120) obstacles.splice(i,1);
+        // collision
+        if(rectsIntersect(player.x, player.y, player.w, player.h, o.x, o.y, o.w, o.h)){
+            running=false;
+        }
+    }
+
+    // difficulty
+    if(frame % 600 === 0){ speedMult += 0.5; spawnInterval = Math.max(36, spawnInterval - 6); }
+
+    // score increases with frame/time
+    if(frame % 6 === 0) score += 1;
+    hud.textContent = 'Score: ' + score;
+}
+
+function rectsIntersect(x1,y1,w1,h1,x2,y2,w2,h2){
+    return !(x2 > x1 + w1 || x2 + w2 < x1 || y2 > y1 + h1 || y2 + h2 < y1);
+}
+
+function draw(){
+    // road background
+    ctx.clearRect(0,0,W,H);
+    // draw road
+    ctx.fillStyle = '#0c2a3a';
+    const roadX = 40, roadW = W - 80;
+    roundRect(ctx, roadX, 0, roadW, H, 12, true, false);
+    // center dashed lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth=6; ctx.setLineDash([18,18]);
+    ctx.beginPath(); ctx.moveTo(W/2,0); ctx.lineTo(W/2,H); ctx.stroke(); ctx.setLineDash([]);
+
+    // obstacles
+    obstacles.forEach(o=>{
+        ctx.fillStyle = '#ffb97a';
+        roundRect(ctx, o.x, o.y, o.w, o.h, 8, true, false);
+    });
+
+    // player car
+    drawCar(player.x, player.y, player.w, player.h);
+
+    if(!running){
+        ctx.fillStyle = 'rgba(0,0,0,0.54)'; ctx.fillRect(0,0,W,H);
+        ctx.fillStyle='#fff'; ctx.font='28px Inter, Arial'; ctx.textAlign='center';
+        ctx.fillText('Game Over', W/2, H/2 - 10);
+        ctx.font='18px Inter, Arial'; ctx.fillText('Score: ' + score, W/2, H/2 + 22);
+        // draw restart hint
+        ctx.font='14px Inter, Arial'; ctx.fillText('Press Restart or R to play again', W/2, H/2 + 52);
+    }
+}
+
+function drawCar(x,y,w,h){
+    // shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.3)'; roundRect(ctx, x+6, y+h-12, w-12, 10, 6, true, false);
+    // body
+    ctx.fillStyle = '#ff4f4f'; roundRect(ctx, x, y, w, h, 8, true, false);
+    // windows
+    ctx.fillStyle = 'rgba(255,255,255,0.12)'; roundRect(ctx, x+8, y+8, w-16, 22, 4, true, false);
+    // wheels
+    ctx.fillStyle = '#071021'; ctx.beginPath(); ctx.arc(x+14, y+h-6, 6, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x+w-14, y+h-6, 6, 0, Math.PI*2); ctx.fill();
+}
+
+function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+    if (typeof r === 'undefined') r = 5;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
+}
+
+// input handlers
+window.addEventListener('keydown', (e)=>{
+    if(e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') leftPressed=true;
+    if(e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') rightPressed=true;
+    if(e.key === 'r' || e.key === 'R') resetGame();
+});
+window.addEventListener('keyup', (e)=>{
+    if(e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') leftPressed=false;
+    if(e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') rightPressed=false;
+});
+
+// on-screen buttons
+const leftBtn = document.getElementById('leftBtn');
+const rightBtn = document.getElementById('rightBtn');
+const mLeft = document.getElementById('mLeft');
+const mRight = document.getElementById('mRight');
+const restartBtn = document.getElementById('restartBtn');
+leftBtn && leftBtn.addEventListener('mousedown', ()=> leftPressed=true);
+leftBtn && leftBtn.addEventListener('mouseup', ()=> leftPressed=false);
+rightBtn && rightBtn.addEventListener('mousedown', ()=> rightPressed=true);
+rightBtn && rightBtn.addEventListener('mouseup', ()=> rightPressed=false);
+leftBtn && leftBtn.addEventListener('touchstart', (e)=>{ e.preventDefault(); leftPressed=true; });
+leftBtn && leftBtn.addEventListener('touchend', ()=> leftPressed=false);
+rightBtn && rightBtn.addEventListener('touchstart', (e)=>{ e.preventDefault(); rightPressed=true; });
+rightBtn && rightBtn.addEventListener('touchend', ()=> rightPressed=false);
+
+mLeft && mLeft.addEventListener('touchstart', (e)=>{ e.preventDefault(); leftPressed=true; });
+mLeft && mLeft.addEventListener('touchend', ()=> leftPressed=false);
+mRight && mRight.addEventListener('touchstart', (e)=>{ e.preventDefault(); rightPressed=true; });
+mRight && mRight.addEventListener('touchend', ()=> rightPressed=false);
+
+restartBtn && restartBtn.addEventListener('click', resetGame);
+
+function resetGame(){
+    obstacles = []; spawnTimer=0; spawnInterval=90; frame=0; score=0; speedMult=1; running=true; player.x = (W-player.w)/2;
+}
+
+function loop(){
+    if(running) update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+// handle resizing for high-DPI
+function fixDPI(){
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = canvas.clientWidth || W;
+    const cssH = canvas.clientHeight || H;
+    canvas.width = Math.max(320, Math.floor(cssW * dpr));
+    canvas.height = Math.max(480, Math.floor(cssH * dpr));
+    // keep logical sizes used in game consistent
+    W = canvas.width; H = canvas.height;
+}
+
+// ensure canvas initialized nicely
+(function init(){
+    // keep the internal logical size fixed (original design uses 360x640)
+    canvas.width = 360; canvas.height = 640; W=360; H=640;
+    player.x = (W-player.w)/2; player.y = H - 120;
+    loop();
+})();
+
+</script>
+</body>
+</html>

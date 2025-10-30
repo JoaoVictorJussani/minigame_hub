@@ -66,7 +66,7 @@
         .title{display:flex; align-items:center; justify-content:space-between; gap:10px}
         .title h2{font-size:1.05rem; margin:0}
         .tag{font-size:0.75rem; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.03); color:var(--neon-cyan)}
-        .desc{font-size:0.9rem; color:rgba(255,255,255,0.7); margin-top:8px}
+        .desc{font-size:0.9rem; color:rgba(255,255,255,0.7); margin-top:8px; min-height:36px}
  
         .card::after{content:""; position:absolute; inset:0; pointer-events:none; border-radius:14px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.02)}
  
@@ -78,6 +78,14 @@
  
         /* responsive */
         @media (max-width:640px){ .search input{width:120px} .logo h1{font-size:1rem} }
+        /* modal for playing games inline */
+        #gameModal{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:none;align-items:center;justify-content:center;z-index:9999}
+        #gameModal .modal-content{width:94%;max-width:1100px;height:85%;background:#071021;border-radius:12px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,0.6);display:flex;flex-direction:column}
+        #gameModal iframe{flex:1;border:0;background:#000}
+        #gameModal .modal-close{position:absolute;right:12px;top:10px;background:transparent;border:0;color:#fff;font-size:20px;padding:6px 8px;cursor:pointer}
+        /* dark theme override */
+        body.dark{ --bg-1: #f6f8ff; --bg-2:#ffffff; --muted: rgba(5,10,20,0.9); --glass: rgba(2,6,23,0.03); color:var(--muted) }
+        body.dark .card{ background: linear-gradient(180deg, rgba(0,0,0,0.03), rgba(0,0,0,0.01)); border:1px solid rgba(2,6,23,0.04)}
     </style>
 </head>
 <body>
@@ -99,7 +107,7 @@
             </svg>
             <div>
                 <h1>Hub de Jeux</h1>
-                <div class="subtitle">Collectionner — Lancer — Partager</div>
+                <div class="subtitle">Collection — Lancer — Partager</div>
             </div>
         </div>
  
@@ -109,6 +117,8 @@
                 <input id="search" placeholder="Rechercher un jeu..." aria-label="Rechercher" />
             </div>
             <button class="filter-btn" id="sortBtn">Trier</button>
+            <a class="filter-btn" href="./home.html">Accueil</a>
+            <button class="filter-btn" id="darkToggle" title="Mode sombre">🌙</button>
         </div>
     </header>
  
@@ -173,14 +183,14 @@
                 <div class="desc">Choisis de jouer contre l'IA ou un autre joueur!</div>
             </div>
 
-                <!-- Agar.io-like -->
-                <div class="card" data-title="Agar" onclick="location.href='./html/agar.html'">
-                    <div class="thumb" aria-hidden="true">
-                        <img src="images/agar.png" style="height:90px; width:90px;">
-                    </div>
-                    <div class="title"><h2>🟣 Agar.io </h2><div class="tag">Arcade</div></div>
-                    <div class="desc">Contrôlez votre cellule et mangez des bots — jeu local, nombreux bots.</div>
+            <!-- Agar.io-like -->
+            <div class="card" data-title="Agar" onclick="location.href='./html/agar.html'">
+                <div class="thumb" aria-hidden="true">
+                    <img src="images/agar.png" style="height:90px; width:90px;">
                 </div>
+                <div class="title"><h2>🟣 Agar.io </h2><div class="tag">Arcade</div></div>
+                <div class="desc">Contrôlez votre cellule et mangez des bots — jeu local, nombreux bots.</div>
+            </div>
 
             <!-- Echo Garden -->
             <div class="card" data-title="Echo_garden" onclick="location.href='./html/echo_garden.html'">
@@ -188,9 +198,7 @@
                 <img src="images/flower.png" style="height:150px; width:150px;">
                 </div>
                 <div class="title"><h2>🌸 Echo Garden</h2><div class="tag">Puzzle</div></div>
-                <div class="desc">
-                  Enregistre ton chemin et utilise des clones pour résoudre les jardins.
-                </div>
+                <div class="desc">Enregistre ton chemin et utilise des clones pour résoudre les jardins.</div>
             </div>
 
             <!-- 2048 Neon Edition -->
@@ -217,12 +225,42 @@
                     <img src="images/space.png" style="height:80px; width:80px;">
                 </div>
                 <div class="title"><h2>🎯 Space Blaster</h2><div class="tag">Arcade</div></div>
-                <div class="desc">
-                    Contrôle une petite navette et détruis les météores ou ennemis qui tombent.<br>
-                </div>
+                <div class="desc">Contrôle une petite navette et détruis les météores ou ennemis qui tombent.</div>
             </div>
 
-            <!-- Geometry Dash (new) -->
+            <!-- Car Race -->
+            <div class="card" data-title="Car Race" onclick="location.href='./html/car.html'">
+                <div class="thumb" aria-hidden="true">
+                    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:120px;height:80px">
+                        <rect x="6" y="22" width="52" height="20" rx="4" fill="#ff4f4f"/>
+                        <rect x="10" y="14" width="44" height="12" rx="3" fill="rgba(255,255,255,0.08)"/>
+                        <circle cx="18" cy="46" r="4" fill="#071021"/>
+                        <circle cx="46" cy="46" r="4" fill="#071021"/>
+                    </svg>
+                </div>
+                <div class="title"><h2>🏎️ Car Race</h2><div class="tag">Arcade</div></div>
+                <div class="desc">Évite le trafic et tiens le plus longtemps possible. Contrôles: ← → ou A/D.</div>
+            </div>
+
+            <!-- Boss Fight -->
+            <div class="card" data-title="Boss Fight" onclick="location.href='./html/boss_fight.html'">
+                <div class="thumb" aria-hidden="true">
+                    <img src="images/boss.svg" style="height:90px; width:90px;">
+                </div>
+                <div class="title"><h2>👾 Boss Fight</h2><div class="tag">Arcade</div></div>
+                <div class="desc">Affrontez un boss coriace. Déplacez-vous, tirez et survivez jusqu'à la victoire !</div>
+            </div>
+
+            <!-- Whack-a-Mole -->
+            <div class="card" data-title="Whack-a-Mole" onclick="location.href='./html/whack_a_mole.html'">
+                <div class="thumb" aria-hidden="true">
+                    <img src="images/whack.svg" style="height:90px; width:90px;">
+                </div>
+                <div class="title"><h2>🐹 Whack-a-Mole</h2><div class="tag">Arcade</div></div>
+                <div class="desc">Tapez sur les taupes qui apparaissent. Score limité dans le temps — voyez combien vous pouvez en battre !</div>
+            </div>
+
+            <!-- Geometry Dash -->
             <div class="card" data-title="Geometry Dash" onclick="location.href='./html/geometry_dash.html'">
                 <div class="thumb" aria-hidden="true">
                     <img src="images/geometry_dash.png" style="height:90px; width:90px;">
@@ -231,7 +269,7 @@
                 <div class="desc">Auto-runner: sautez pour éviter les obstacles. Contrôles: Espace / clic / tactile.</div>
             </div>
 
-            <!-- Tic Tac Toe (new) -->
+            <!-- Tic Tac Toe -->
             <div class="card" data-title="Tic Tac Toe" onclick="location.href='./html/tictactoe.html'">
                 <div class="thumb" aria-hidden="true">
                     <img src="images/tictactoe.png" style="height:90px; width:90px;">
@@ -240,10 +278,10 @@
                 <div class="desc">Deux joueurs en local — alignez trois symboles pour gagner.</div>
             </div>
 
-            <!-- Battle Royale (Fortnite-like mini) -->
+            <!-- Battle Royale -->
             <div class="card" data-title="Battle Royale" onclick="location.href='./html/fortnite.html'">
                 <div class="thumb" aria-hidden="true">
-                    <img src="images/spaceship.png" style="height:90px; width:90px;">
+                    <img src="images/battle_royal.png" style="height:90px; width:90px;">
                 </div>
                 <div class="title"><h2>🏕️ Battle Royale (mini)</h2><div class="tag">Shooter</div></div>
                 <div class="desc">Simple Battle Royale: déplacez-vous (WASD), visez avec la souris, cliquez pour tirer. Dernier survivant gagne.</div>
@@ -253,6 +291,13 @@
     </main>
  
     <footer>Astuce: utilisez la barre de recherche pour filtrer vos jeux. Cliquez sur une carte pour lancer.</footer>
+ 
+    <div id="gameModal" role="dialog" aria-modal="true" aria-hidden="true">
+        <div class="modal-content">
+            <button class="modal-close" aria-label="Fermer" onclick="closeGameModal()">✕</button>
+            <iframe id="gameFrame" src="about:blank" title="Game iframe" allowfullscreen sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+        </div>
+    </div>
  
     <script>
         // keep existing pong chooser but localized and slightly improved
@@ -300,6 +345,15 @@
             asc = !asc;
             sortBtn.textContent = asc ? 'Trier' : 'Trier (Z→A)';
         });
+ 
+        // dark mode persist
+        const DARK_KEY = 'hub_dark_v1';
+        function setDark(enabled){ if(enabled) document.body.classList.add('dark'); else document.body.classList.remove('dark'); localStorage.setItem(DARK_KEY, enabled ? '1' : '0'); }
+        (function(){ const dark = localStorage.getItem(DARK_KEY) === '1'; setDark(dark); document.getElementById('darkToggle').textContent = document.body.classList.contains('dark') ? '☀️' : '🌙'; })();
+        document.getElementById('darkToggle').addEventListener('click', ()=>{ const enabled = !document.body.classList.contains('dark'); setDark(enabled); document.getElementById('darkToggle').textContent = enabled ? '☀️' : '🌙'; });
+ 
+        // helper to close modal (left as utility)
+        function closeGameModal(){ document.getElementById('gameModal').style.display = 'none'; document.getElementById('gameFrame').src = 'about:blank'; }
     </script>
 </body>
 </html>

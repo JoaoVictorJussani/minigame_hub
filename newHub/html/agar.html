@@ -27,6 +27,7 @@
   <div class="overlay" id="hud">
     <div id="mass">Mass: 0</div>
     <div id="bots">Bots: 0</div>
+    <div id="food">Food: 0</div>
   </div>
 
   <div class="center-msg" id="msg">
@@ -35,7 +36,7 @@
   </div>
 
   <script>
-    // Minimal agar-like game with many bots
+    // Minimal agar-like game with improved bots + split mechanic
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     let DPR = Math.max(1, window.devicePixelRatio || 1);
@@ -58,9 +59,12 @@
     // Utility
     function rand(min, max){ return Math.random()*(max-min)+min }
     function dist(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return Math.hypot(dx,dy) }
+    function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
 
-    // Player
-    const player = { x: WIDTH()/2, y: HEIGHT()/2, mass: 120, color:'#ffffff', vx:0, vy:0 };
+    // Player: main piece + shards
+    const mainPlayer = { x: WIDTH()/2, y: HEIGHT()/2, mass: 120, color:'#ffffff', vx:0, vy:0 };
+    const shards = []; // split pieces
+
     function massToRadius(m){ return Math.max(6, Math.sqrt(m/Math.PI)*2.6) }
 
     // Bots
@@ -76,44 +80,184 @@
         mass: m,
         color: `hsl(${Math.floor(rand(0,360))}deg 80% 60%)`,
         dir: rand(0,Math.PI*2),
-        speed: rand(0.2,1.2)
+        speed: rand(0.18,0.9),
+        // simple memory
+        target: null
       };
     }
 
+    // Food pellets
+    const FOOD_COUNT = 120;
+    const foods = [];
+    function spawnFood(){
+      return {
+        x: rand(12, WIDTH()-12),
+        y: rand(12, HEIGHT()-12),
+        mass: Math.round(rand(2, 10)),
+        color: `hsl(${Math.floor(rand(80,140))}deg 60% ${Math.floor(rand(45,65))}%)`
+      };
+    }
+    // initialize foods
+    for(let i=0;i<FOOD_COUNT;i++) foods.push(spawnFood());
+
     // Input
-    const mouse = { x: player.x, y: player.y };
+    const mouse = { x: mainPlayer.x, y: mainPlayer.y };
     window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY });
     window.addEventListener('touchmove', e => { if(e.touches[0]){ mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY } }, {passive:true});
 
-    // HUD elements
-    const massEl = document.getElementById('mass');
-    const botsEl = document.getElementById('bots');
+  // HUD elements
+  const massEl = document.getElementById('mass');
+  const botsEl = document.getElementById('bots');
+  const foodEl = document.getElementById('food');
 
     let running = true;
 
+    // Split mechanic
+    const SPLIT_MIN_MASS = 60; // minimum mass to allow split
+    const SHARD_LIFETIME = 2200; // ms before shard can merge
+    function trySplit(){
+      if(mainPlayer.mass <= SPLIT_MIN_MASS) return;
+      // shard mass taken
+      const shardMass = Math.floor(mainPlayer.mass/2);
+      mainPlayer.mass -= shardMass;
+      // direction towards mouse
+      let dx = mouse.x - mainPlayer.x, dy = mouse.y - mainPlayer.y;
+      const dlen = Math.hypot(dx,dy) || 1;
+      dx /= dlen; dy /= dlen;
+      const speed = clamp(10 - Math.log(shardMass+1)*1.5, 4, 12);
+      const shard = {
+        x: mainPlayer.x + dx * (massToRadius(mainPlayer.mass)+8),
+        y: mainPlayer.y + dy * (massToRadius(mainPlayer.mass)+8),
+        mass: shardMass,
+        color: mainPlayer.color,
+        vx: dx * speed,
+        vy: dy * speed,
+        age: 0,
+        life: SHARD_LIFETIME,
+        canMerge: false
+      };
+      shards.push(shard);
+    }
+
+    window.addEventListener('keydown', e => { if(e.code === 'Space'){ e.preventDefault(); trySplit(); } });
+
     function step(dt){
-      // player movement: moves toward mouse, slower when larger
-      const r = massToRadius(player.mass);
-      const maxSpeed = Math.max(0.6, 4.6 - Math.log(player.mass+1)*0.6);
-      const ax = (mouse.x - player.x) * 0.06;
-      const ay = (mouse.y - player.y) * 0.06;
-      player.vx += ax * 0.6; player.vy += ay * 0.6;
-      // damp
-      player.vx *= 0.92; player.vy *= 0.92;
-      const speed = Math.hypot(player.vx, player.vy);
-      if(speed > maxSpeed){ player.vx = (player.vx / speed) * maxSpeed; player.vy = (player.vy / speed) * maxSpeed; }
-      player.x += player.vx; player.y += player.vy;
+      // main player movement: moves toward mouse, slower when larger
+      const r = massToRadius(mainPlayer.mass);
+      const maxSpeed = Math.max(0.6, 4.6 - Math.log(mainPlayer.mass+1)*0.6);
+      const ax = (mouse.x - mainPlayer.x) * 0.06;
+      const ay = (mouse.y - mainPlayer.y) * 0.06;
+      mainPlayer.vx += ax * 0.6; mainPlayer.vy += ay * 0.6;
+      mainPlayer.vx *= 0.92; mainPlayer.vy *= 0.92;
+      let speed = Math.hypot(mainPlayer.vx, mainPlayer.vy);
+      if(speed > maxSpeed){ mainPlayer.vx = (mainPlayer.vx / speed) * maxSpeed; mainPlayer.vy = (mainPlayer.vy / speed) * maxSpeed; }
+      mainPlayer.x += mainPlayer.vx; mainPlayer.y += mainPlayer.vy;
+      mainPlayer.x = Math.max(5, Math.min(WIDTH()-5, mainPlayer.x));
+      mainPlayer.y = Math.max(5, Math.min(HEIGHT()-5, mainPlayer.y));
 
-      // keep player in bounds
-      player.x = Math.max(5, Math.min(WIDTH()-5, player.x));
-      player.y = Math.max(5, Math.min(HEIGHT()-5, player.y));
+  // shards movement & aging
+      for(let i=shards.length-1;i>=0;i--){
+        const s = shards[i];
+        s.x += s.vx; s.y += s.vy;
+        // slight damping
+        s.vx *= 0.995; s.vy *= 0.995;
+        s.age += dt*1000;
+        if(s.age >= s.life) s.canMerge = true;
+        // keep on screen
+        if(s.x < 6) s.x = WIDTH()-6;
+        if(s.x > WIDTH()-6) s.x = 6;
+        if(s.y < 6) s.y = HEIGHT()-6;
+        if(s.y > HEIGHT()-6) s.y = 6;
+        // try merge if allowed
+        if(s.canMerge){
+          const d = dist(s, mainPlayer);
+          if(d < massToRadius(mainPlayer.mass) + massToRadius(s.mass) + 8){
+            mainPlayer.mass += s.mass;
+            shards.splice(i,1);
+          }
+        }
+      }
 
-      // bots wander
+      // player pieces eat food
+      const playerPieces = [mainPlayer, ...shards];
+      for(let i=foods.length-1;i>=0;i--){
+        const f = foods[i];
+        let eaten = false;
+        for(const p of playerPieces){
+          const d = dist(p, f);
+          const rP = massToRadius(p.mass);
+          const rF = massToRadius(f.mass);
+          if(d < rP + 2){
+            p.mass += f.mass; eaten = true; break;
+          }
+        }
+        if(eaten){ foods.splice(i,1); foods.push(spawnFood()); }
+      }
+
+
+      // bots: eat nearby food first (cheaper check per bot)
       for(const b of bots){
-        // random jitter
-        b.dir += rand(-0.25,0.25);
-        b.x += Math.cos(b.dir) * b.speed * (1 + Math.log(b.mass+1)*0.02);
-        b.y += Math.sin(b.dir) * b.speed * (1 + Math.log(b.mass+1)*0.02);
+        for(let fi = foods.length-1; fi >= 0; fi--){
+          const f = foods[fi];
+          const d = dist(b, f);
+          const rB = massToRadius(b.mass);
+          if(d < rB + 3){
+            b.mass += f.mass;
+            foods.splice(fi,1);
+            foods.push(spawnFood());
+            break;
+          }
+        }
+      }
+
+      // bots: smarter behavior (tuned to be less skittish and slower when big)
+      for(const b of bots){
+        // detect nearby threats (larger pieces) and targets
+        let nearestTarget = null; let nearestTargetDist = 1e9;
+        // consider main player and shards
+        const pieces = [mainPlayer, ...shards];
+        for(const p of pieces){
+          const d = dist(b, p);
+          // only consider as target if significantly smaller
+          if(p.mass < b.mass * 0.9 && d < nearestTargetDist){ nearestTarget = p; nearestTargetDist = d; }
+        }
+        // also consider smaller bots as potential targets
+        for(const other of bots){
+          if(other === b) continue;
+          const d = dist(b, other);
+          if(other.mass < b.mass * 0.9 && d < nearestTargetDist){ nearestTarget = other; nearestTargetDist = d; }
+        }
+
+        // detect threats (only flee from much larger pieces)
+        let nearestThreat = null; let threatDist = 1e9;
+        for(const p of pieces){
+          const d = dist(b, p);
+          if(p.mass > b.mass * 1.6 && d < threatDist){ nearestThreat = p; threatDist = d; }
+        }
+
+        if(nearestThreat && threatDist < 220){
+          // flee from threat but not too fast
+          const dx = b.x - nearestThreat.x, dy = b.y - nearestThreat.y;
+          const ang = Math.atan2(dy, dx);
+          b.dir = ang + rand(-0.3,0.3);
+          const fleeSpeed = 1.0 + Math.log(b.mass+1)*0.02;
+          b.x += Math.cos(b.dir) * fleeSpeed;
+          b.y += Math.sin(b.dir) * fleeSpeed;
+        } else if(nearestTarget && nearestTargetDist < 600){
+          // chase target moderately
+          const dx = nearestTarget.x - b.x, dy = nearestTarget.y - b.y;
+          const ang = Math.atan2(dy, dx);
+          b.dir = ang + rand(-0.12,0.12);
+          const sp = 0.5 + (Math.log(b.mass+1)*0.03) + (nearestTarget.mass < b.mass ? 0.45 : 0);
+          b.x += Math.cos(b.dir) * sp;
+          b.y += Math.sin(b.dir) * sp;
+        } else {
+          // wander
+          b.dir += rand(-0.2,0.2);
+          b.x += Math.cos(b.dir) * b.speed * (1 + Math.log(b.mass+1)*0.015);
+          b.y += Math.sin(b.dir) * b.speed * (1 + Math.log(b.mass+1)*0.015);
+        }
+
         // clamp
         if(b.x < 10) b.x = WIDTH()-10;
         if(b.x > WIDTH()-10) b.x = 10;
@@ -121,17 +265,22 @@
         if(b.y > HEIGHT()-10) b.y = 10;
       }
 
-      // collisions & eating
-      // player eats bots
+  // collisions & eating
+
+      // player pieces eat bots
       for(let i=bots.length-1;i>=0;i--){
         const b = bots[i];
-        const d = dist(player,b);
-        const rPlayer = massToRadius(player.mass);
-        const rBot = massToRadius(b.mass);
-        if(rPlayer > rBot * 1.12 && d < rPlayer - rBot*0.35){
-          // eat
-          player.mass += b.mass * 0.85; // some loss
-          bots[i] = spawnBot();
+        for(let pidx = 0; pidx < playerPieces.length; pidx++){
+          const p = playerPieces[pidx];
+          const d = dist(p,b);
+          const rPlayer = massToRadius(p.mass);
+          const rBot = massToRadius(b.mass);
+          if(rPlayer > rBot * 1.12 && d < rPlayer - rBot*0.35){
+            // eat
+            p.mass += b.mass * 0.85; // some loss
+            bots[i] = spawnBot();
+            break;
+          }
         }
       }
 
@@ -143,7 +292,6 @@
           const rA = massToRadius(A.mass), rB = massToRadius(B.mass);
           if(rA > rB * 1.12 && d < rA - rB*0.35){
             A.mass += B.mass * 0.85;
-            // respawn B
             bots[j] = spawnBot();
           } else if(rB > rA * 1.12 && d < rB - rA*0.35){
             B.mass += A.mass * 0.85;
@@ -152,21 +300,35 @@
         }
       }
 
-      // bots can also eat player
+      // bots can also eat player pieces
       for(const b of bots){
-        const d = dist(player, b);
-        const rPlayer = massToRadius(player.mass);
-        const rBot = massToRadius(b.mass);
-        if(rBot > rPlayer * 1.12 && d < rBot - rPlayer*0.35){
-          // player eaten -> game over
+        for(let si = shards.length-1; si >= 0; si--){
+          const s = shards[si];
+          const d = dist(s, b);
+          const rS = massToRadius(s.mass);
+          const rB = massToRadius(b.mass);
+          if(rB > rS * 1.12 && d < rB - rS*0.35){
+            // shard eaten
+            shards.splice(si,1);
+            break;
+          }
+        }
+        // check main player
+        const dMain = dist(mainPlayer, b);
+        const rMain = massToRadius(mainPlayer.mass);
+        const rB = massToRadius(b.mass);
+        if(rB > rMain * 1.12 && dMain < rB - rMain*0.35){
+          // main player eaten -> game over
           running = false;
           showGameOver();
+          return; // stop further processing
         }
       }
 
-      // update HUD
-      massEl.textContent = 'Mass: ' + Math.round(player.mass);
-      botsEl.textContent = 'Bots: ' + bots.length;
+  // update HUD
+  massEl.textContent = 'Mass: ' + Math.round(mainPlayer.mass) + (shards.length ? (' (+ ' + shards.length + ' shards)') : '');
+  botsEl.textContent = 'Bots: ' + bots.length;
+  if(foodEl) foodEl.textContent = 'Food: ' + foods.length;
     }
 
     function draw(){
@@ -175,21 +337,51 @@
       ctx.fillStyle = 'rgba(255,255,255,0.01)';
       for(let x=0;x<WIDTH();x+=120){ ctx.fillRect(x,0,0.6,HEIGHT()); }
 
-      // draw bots
-      for(const b of bots){
-        const r = massToRadius(b.mass);
-        ctx.beginPath(); ctx.fillStyle = b.color; ctx.globalAlpha = 0.95; ctx.arc(b.x, b.y, r, 0, Math.PI*2); ctx.fill();
-        ctx.globalAlpha = 1;
-        // small name/label
-        if(r > 18){ ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.font = '10px sans-serif'; ctx.textAlign='center'; ctx.fillText(Math.round(b.mass), b.x, b.y+3); }
+      // Build a single list of drawable entities and sort by radius so smallest draw first
+      const drawList = [];
+
+      // foods (small, draw first)
+      for(const f of foods){
+        const fr = Math.max(2, Math.sqrt(f.mass/Math.PI)*1.6);
+        drawList.push({type:'food', x:f.x, y:f.y, r:fr, color:f.color, mass:f.mass, obj:f});
       }
 
-      // draw player (on top)
-      const pr = massToRadius(player.mass);
-      // glow
-      ctx.beginPath(); ctx.fillStyle = '#19f0ff'; ctx.globalAlpha = 0.06; ctx.arc(player.x, player.y, pr*1.8, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1;
-      ctx.beginPath(); ctx.fillStyle = player.color; ctx.arc(player.x, player.y, pr, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#000'; ctx.font = '12px sans-serif'; ctx.textAlign='center'; ctx.fillText(Math.round(player.mass), player.x, player.y+4);
+      // bots
+      for(const b of bots){
+        const r = massToRadius(b.mass);
+        drawList.push({type:'bot', x:b.x, y:b.y, r:r, color:b.color, mass:b.mass, obj:b});
+      }
+
+      // shards
+      for(const s of shards){
+        const r = massToRadius(s.mass);
+        drawList.push({type:'shard', x:s.x, y:s.y, r:r, color:s.color, mass:s.mass, obj:s});
+      }
+
+      // main player
+      const pr = massToRadius(mainPlayer.mass);
+      drawList.push({type:'player', x:mainPlayer.x, y:mainPlayer.y, r:pr, color:mainPlayer.color, mass:mainPlayer.mass, obj:mainPlayer});
+
+      // sort ascending by radius (smallest first), so biggest drawn last -> appears on top
+      drawList.sort((a,b) => a.r - b.r);
+
+      // draw in order
+      for(const e of drawList){
+        if(e.type === 'food'){
+          ctx.beginPath(); ctx.fillStyle = e.color; ctx.globalAlpha = 0.95; ctx.arc(e.x, e.y, e.r, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1;
+        } else if(e.type === 'bot'){
+          ctx.beginPath(); ctx.fillStyle = e.color; ctx.globalAlpha = 0.95; ctx.arc(e.x, e.y, e.r, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1;
+          if(e.r > 12){ ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.font = '10px sans-serif'; ctx.textAlign='center'; ctx.fillText(Math.round(e.mass), e.x, e.y+3); }
+        } else if(e.type === 'shard'){
+          ctx.beginPath(); ctx.fillStyle = e.color; ctx.globalAlpha = 0.98; ctx.arc(e.x, e.y, e.r, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1;
+          if(e.r > 12){ ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.font = '10px sans-serif'; ctx.textAlign='center'; ctx.fillText(Math.round(e.mass), e.x, e.y+3); }
+        } else if(e.type === 'player'){
+          // glow under the player (draw before the player circle) - since player is last if largest it'll appear on top
+          ctx.beginPath(); ctx.fillStyle = '#19f0ff'; ctx.globalAlpha = 0.06; ctx.arc(e.x, e.y, e.r*1.8, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1;
+          ctx.beginPath(); ctx.fillStyle = e.color; ctx.arc(e.x, e.y, e.r, 0, Math.PI*2); ctx.fill();
+          ctx.fillStyle = '#000'; ctx.font = '12px sans-serif'; ctx.textAlign='center'; ctx.fillText(Math.round(e.mass), e.x, e.y+4);
+        }
+      }
     }
 
     let last = performance.now();
@@ -207,7 +399,7 @@
 
     function showGameOver(){ msgText.textContent = 'Vous avez été mangé !'; msg.classList.add('show'); }
     function resetGame(){
-      player.x = WIDTH()/2; player.y = HEIGHT()/2; player.mass = 120; player.vx=0; player.vy=0; running = true; msg.classList.remove('show');
+      mainPlayer.x = WIDTH()/2; mainPlayer.y = HEIGHT()/2; mainPlayer.mass = 120; mainPlayer.vx=0; mainPlayer.vy=0; shards.length = 0; running = true; msg.classList.remove('show');
       // reset bots
       for(let i=0;i<bots.length;i++) bots[i] = spawnBot();
       requestAnimationFrame(loop);
