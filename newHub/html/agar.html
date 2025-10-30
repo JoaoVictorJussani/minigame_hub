@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Agar.io - Bots</title>
+  <style>
+    :root{--bg:#071021; --muted:rgba(255,255,255,0.9); --accent:#19f0ff}
+    html,body{height:100%;margin:0}
+    body{background:linear-gradient(180deg,#071021,#0f1a2b);color:var(--muted);font-family:Inter,Segoe UI,Roboto,Arial}
+    #game{display:block;width:100vw;height:100vh}
+    .ui{position:fixed;left:16px;top:16px;z-index:20;background:rgba(0,0,0,0.25);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04)}
+    .ui button{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);padding:6px 10px;border-radius:8px;cursor:pointer}
+    .overlay{position:fixed;right:16px;top:16px;background:rgba(0,0,0,0.25);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04)}
+    .center-msg{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.45);padding:18px;border-radius:12px;border:1px solid rgba(255,255,255,0.06);display:none}
+    .center-msg.show{display:block}
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div class="ui">
+    <button id="back">← Retour</button>
+    <button id="reset">Recommencer</button>
+  </div>
+
+  <div class="overlay" id="hud">
+    <div id="mass">Mass: 0</div>
+    <div id="bots">Bots: 0</div>
+  </div>
+
+  <div class="center-msg" id="msg">
+    <div id="msgText">Game Over</div>
+    <div style="margin-top:10px;text-align:center"><button id="playAgain">Jouer encore</button></div>
+  </div>
+
+  <script>
+    // Minimal agar-like game with many bots
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    let DPR = Math.max(1, window.devicePixelRatio || 1);
+
+    function resize(){
+      DPR = Math.max(1, window.devicePixelRatio || 1);
+      canvas.width = Math.floor(window.innerWidth * DPR);
+      canvas.height = Math.floor(window.innerHeight * DPR);
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+      ctx.setTransform(DPR,0,0,DPR,0,0);
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Game state
+    const WIDTH = () => canvas.width / DPR;
+    const HEIGHT = () => canvas.height / DPR;
+
+    // Utility
+    function rand(min, max){ return Math.random()*(max-min)+min }
+    function dist(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return Math.hypot(dx,dy) }
+
+    // Player
+    const player = { x: WIDTH()/2, y: HEIGHT()/2, mass: 120, color:'#ffffff', vx:0, vy:0 };
+    function massToRadius(m){ return Math.max(6, Math.sqrt(m/Math.PI)*2.6) }
+
+    // Bots
+    const BOT_COUNT = 140; // tune for perf
+    const bots = [];
+    for(let i=0;i<BOT_COUNT;i++) bots.push(spawnBot());
+
+    function spawnBot(){
+      const m = rand(8, 160);
+      return {
+        x: rand(20, WIDTH()-20),
+        y: rand(20, HEIGHT()-20),
+        mass: m,
+        color: `hsl(${Math.floor(rand(0,360))}deg 80% 60%)`,
+        dir: rand(0,Math.PI*2),
+        speed: rand(0.2,1.2)
+      };
+    }
+
+    // Input
+    const mouse = { x: player.x, y: player.y };
+    window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY });
+    window.addEventListener('touchmove', e => { if(e.touches[0]){ mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY } }, {passive:true});
+
+    // HUD elements
+    const massEl = document.getElementById('mass');
+    const botsEl = document.getElementById('bots');
+
+    let running = true;
+
+    function step(dt){
+      // player movement: moves toward mouse, slower when larger
+      const r = massToRadius(player.mass);
+      const maxSpeed = Math.max(0.6, 4.6 - Math.log(player.mass+1)*0.6);
+      const ax = (mouse.x - player.x) * 0.06;
+      const ay = (mouse.y - player.y) * 0.06;
+      player.vx += ax * 0.6; player.vy += ay * 0.6;
+      // damp
+      player.vx *= 0.92; player.vy *= 0.92;
+      const speed = Math.hypot(player.vx, player.vy);
+      if(speed > maxSpeed){ player.vx = (player.vx / speed) * maxSpeed; player.vy = (player.vy / speed) * maxSpeed; }
+      player.x += player.vx; player.y += player.vy;
+
+      // keep player in bounds
+      player.x = Math.max(5, Math.min(WIDTH()-5, player.x));
+      player.y = Math.max(5, Math.min(HEIGHT()-5, player.y));
+
+      // bots wander
+      for(const b of bots){
+        // random jitter
+        b.dir += rand(-0.25,0.25);
+        b.x += Math.cos(b.dir) * b.speed * (1 + Math.log(b.mass+1)*0.02);
+        b.y += Math.sin(b.dir) * b.speed * (1 + Math.log(b.mass+1)*0.02);
+        // clamp
+        if(b.x < 10) b.x = WIDTH()-10;
+        if(b.x > WIDTH()-10) b.x = 10;
+        if(b.y < 10) b.y = HEIGHT()-10;
+        if(b.y > HEIGHT()-10) b.y = 10;
+      }
+
+      // collisions & eating
+      // player eats bots
+      for(let i=bots.length-1;i>=0;i--){
+        const b = bots[i];
+        const d = dist(player,b);
+        const rPlayer = massToRadius(player.mass);
+        const rBot = massToRadius(b.mass);
+        if(rPlayer > rBot * 1.12 && d < rPlayer - rBot*0.35){
+          // eat
+          player.mass += b.mass * 0.85; // some loss
+          bots[i] = spawnBot();
+        }
+      }
+
+      // bots eat bots
+      for(let i=0;i<bots.length;i++){
+        for(let j=i+1;j<bots.length;j++){
+          const A = bots[i], B = bots[j];
+          const d = dist(A,B);
+          const rA = massToRadius(A.mass), rB = massToRadius(B.mass);
+          if(rA > rB * 1.12 && d < rA - rB*0.35){
+            A.mass += B.mass * 0.85;
+            // respawn B
+            bots[j] = spawnBot();
+          } else if(rB > rA * 1.12 && d < rB - rA*0.35){
+            B.mass += A.mass * 0.85;
+            bots[i] = spawnBot();
+          }
+        }
+      }
+
+      // bots can also eat player
+      for(const b of bots){
+        const d = dist(player, b);
+        const rPlayer = massToRadius(player.mass);
+        const rBot = massToRadius(b.mass);
+        if(rBot > rPlayer * 1.12 && d < rBot - rPlayer*0.35){
+          // player eaten -> game over
+          running = false;
+          showGameOver();
+        }
+      }
+
+      // update HUD
+      massEl.textContent = 'Mass: ' + Math.round(player.mass);
+      botsEl.textContent = 'Bots: ' + bots.length;
+    }
+
+    function draw(){
+      ctx.clearRect(0,0,WIDTH(),HEIGHT());
+      // background grid subtle
+      ctx.fillStyle = 'rgba(255,255,255,0.01)';
+      for(let x=0;x<WIDTH();x+=120){ ctx.fillRect(x,0,0.6,HEIGHT()); }
+
+      // draw bots
+      for(const b of bots){
+        const r = massToRadius(b.mass);
+        ctx.beginPath(); ctx.fillStyle = b.color; ctx.globalAlpha = 0.95; ctx.arc(b.x, b.y, r, 0, Math.PI*2); ctx.fill();
+        ctx.globalAlpha = 1;
+        // small name/label
+        if(r > 18){ ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.font = '10px sans-serif'; ctx.textAlign='center'; ctx.fillText(Math.round(b.mass), b.x, b.y+3); }
+      }
+
+      // draw player (on top)
+      const pr = massToRadius(player.mass);
+      // glow
+      ctx.beginPath(); ctx.fillStyle = '#19f0ff'; ctx.globalAlpha = 0.06; ctx.arc(player.x, player.y, pr*1.8, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1;
+      ctx.beginPath(); ctx.fillStyle = player.color; ctx.arc(player.x, player.y, pr, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#000'; ctx.font = '12px sans-serif'; ctx.textAlign='center'; ctx.fillText(Math.round(player.mass), player.x, player.y+4);
+    }
+
+    let last = performance.now();
+    function loop(now){
+      const dt = Math.min(40, now - last);
+      last = now;
+      if(running){ step(dt/1000); draw(); requestAnimationFrame(loop); }
+    }
+    requestAnimationFrame(loop);
+
+    // Game over UI
+    const msg = document.getElementById('msg');
+    const msgText = document.getElementById('msgText');
+    const playAgain = document.getElementById('playAgain');
+
+    function showGameOver(){ msgText.textContent = 'Vous avez été mangé !'; msg.classList.add('show'); }
+    function resetGame(){
+      player.x = WIDTH()/2; player.y = HEIGHT()/2; player.mass = 120; player.vx=0; player.vy=0; running = true; msg.classList.remove('show');
+      // reset bots
+      for(let i=0;i<bots.length;i++) bots[i] = spawnBot();
+      requestAnimationFrame(loop);
+    }
+
+    // buttons
+    document.getElementById('back').addEventListener('click', ()=>{ location.href = '../index.html' });
+    document.getElementById('reset').addEventListener('click', ()=>{ resetGame() });
+    playAgain.addEventListener('click', ()=>{ resetGame() });
+
+    // small safe guard: pause when page hidden
+    document.addEventListener('visibilitychange', ()=>{ if(document.hidden) running=false; else if(!running && !msg.classList.contains('show')){ running=true; last = performance.now(); requestAnimationFrame(loop); } });
+
+    // initial focus
+    canvas.tabIndex = 0;
+  </script>
+</body>
+</html>

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Battle Royale (mini)</title>
+  <style>
+    :root{--bg:#071021;--fg:#e6f7ff;--accent:#19f0ff}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#071021,#0f1a2b);color:var(--fg);font-family:Inter,Segoe UI,Roboto,Arial}
+    canvas{display:block;width:100vw;height:100vh}
+    .ui{position:fixed;left:12px;top:12px;z-index:40;background:rgba(0,0,0,0.35);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04)}
+    .ui button{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--fg);padding:6px 10px;border-radius:8px;cursor:pointer}
+    .hud{position:fixed;right:12px;top:12px;background:rgba(0,0,0,0.35);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04)}
+    .overlay{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.5);padding:18px;border-radius:12px;z-index:50;display:none}
+    .overlay.show{display:block}
+    small{display:block;color:rgba(255,255,255,0.6)}
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div class="ui"><button id="back">← Retour</button> <button id="reset">Recommencer</button></div>
+  <div class="hud"><div id="players">Joueurs: 0</div><div id="zone">Zone: --</div><div id="hp">HP: 0</div></div>
+  <div class="overlay" id="overlay"><div id="overlayText">Vous êtes mort</div><div style="margin-top:10px;text-align:center"><button id="playAgain">Jouer encore</button></div></div>
+
+  <script>
+    // Simplified local Battle Royale vs bots
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    let DPR = Math.max(1, window.devicePixelRatio || 1);
+    function resize(){ DPR = Math.max(1, window.devicePixelRatio || 1); canvas.width = Math.floor(window.innerWidth * DPR); canvas.height = Math.floor(window.innerHeight * DPR); canvas.style.width = window.innerWidth+'px'; canvas.style.height = window.innerHeight+'px'; ctx.setTransform(DPR,0,0,DPR,0,0); }
+    window.addEventListener('resize', resize); resize();
+
+    const WIDTH = ()=>canvas.width/DPR, HEIGHT = ()=>canvas.height/DPR;
+
+    // Player
+    const player = { id:'you', x:0,y:0,hp:100, speed:160, angle:0, size:12, bullets:[], alive:true };
+
+    // Bots
+    const BOT_COUNT = 12; // tune for perf
+    const bots = [];
+    function spawnBot(i){ return { id:'bot'+i, x:rand(100, WIDTH()-100), y:rand(100, HEIGHT()-100), hp:60 + Math.floor(Math.random()*60), speed:100 + Math.random()*60, size:10 + Math.random()*6, rx:0, ry:0, cooldown:rand(0,2), alive:true }; }
+    for(let i=0;i<BOT_COUNT;i++) bots.push(spawnBot(i));
+
+    // Bullets
+    const bullets = [];
+    function fire(shooter, angle, speed, damage){ bullets.push({x:shooter.x, y:shooter.y, vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed, owner:shooter.id, damage, life:2.2}); }
+
+  // Safe zone
+    let zone = { x: WIDTH()/2, y: HEIGHT()/2, r: Math.min(WIDTH(),HEIGHT())*0.45, shrinkTimer:8, shrinkTo:0.12 }; // r as px
+    let shrinkInterval = 8; // seconds between shrinks
+    let shrinkPhase = 0;
+  let gameOver = false;
+
+    // Utility
+    function rand(a,b){ return Math.random()*(b-a)+a }
+    function dist(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return Math.hypot(dx,dy); }
+
+    // Input
+    const keys = {}; window.addEventListener('keydown', e=>{ keys[e.key.toLowerCase()] = true; }); window.addEventListener('keyup', e=>{ keys[e.key.toLowerCase()] = false; });
+    let mouse = {x: WIDTH()/2, y: HEIGHT()/2}; window.addEventListener('mousemove', e=>{ mouse.x = e.clientX; mouse.y = e.clientY; });
+    window.addEventListener('mousedown', e=>{ if(player.alive) shoot(); });
+
+    function shoot(){ if(!player.alive) return; const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x); fire(player, angle, 520 + Math.random()*80, 18); }
+
+    // Improved AI behavior: prefer zone, pick nearest alive target, separation and jitter
+    function botUpdate(b, dt){
+      if(!b.alive) return;
+
+      // small jitter to avoid perfectly uniform movement
+      const jitterAngle = (Math.random() - 0.5) * 0.6; // radians
+
+      // 1) Prefer staying inside safe zone: compute vector toward zone center when outside or far from center
+      const toZoneX = zone.x - b.x;
+      const toZoneY = zone.y - b.y;
+      const distToZone = Math.hypot(toZoneX, toZoneY);
+      let zoneBiasX = 0, zoneBiasY = 0;
+      const zoneThreshold = zone.r * 0.7; // start biasing before edge
+      if(distToZone > zone.r){ // strongly pull inside
+        zoneBiasX = toZoneX / distToZone * 1.6;
+        zoneBiasY = toZoneY / distToZone * 1.6;
+      } else if(distToZone > zoneThreshold){ // mild pull
+        zoneBiasX = toZoneX / distToZone * 0.7;
+        zoneBiasY = toZoneY / distToZone * 0.7;
+      }
+
+      // 2) Choose nearest alive target (player or other bots)
+      let nearest = null;
+      let minD = Infinity;
+      // consider player first
+      if(player.alive){ const d = Math.hypot(player.x - b.x, player.y - b.y); if(d < minD){ minD = d; nearest = player; } }
+      for(const other of bots){ if(other === b || !other.alive) continue; const d = Math.hypot(other.x - b.x, other.y - b.y); if(d < minD){ minD = d; nearest = other; } }
+
+      // compute desire vector toward target (if any)
+      let tgtX = 0, tgtY = 0;
+      if(nearest){ tgtX = (nearest.x - b.x); tgtY = (nearest.y - b.y); const L = Math.hypot(tgtX, tgtY) || 1; tgtX /= L; tgtY /= L; }
+
+      // 3) Separation: avoid crowding nearby bots and flee from dense clusters
+      let sepX = 0, sepY = 0;
+      const sepRadius = 48; // increased radius so bots spread earlier
+      let nearbyCount = 0;
+      let crowdCenterX = 0, crowdCenterY = 0;
+      for(const other of bots){
+        if(other === b || !other.alive) continue;
+        const dx = b.x - other.x, dy = b.y - other.y;
+        const d = Math.hypot(dx,dy);
+        if(d > 0 && d < sepRadius){
+          sepX += dx / d; sepY += dy / d;
+          nearbyCount++;
+          crowdCenterX += other.x; crowdCenterY += other.y;
+        }
+      }
+      if(nearbyCount > 0){ crowdCenterX /= nearbyCount; crowdCenterY /= nearbyCount; }
+
+      // Combine vectors: target (moderate), zoneBias (strong if outside), separation (moderate), plus jitter
+      // If many nearby bots, apply a flee vector away from the crowd center so they disperse
+      let flockFleeX = 0, flockFleeY = 0;
+      if(nearbyCount >= 3){ // flee away from crowd center
+        const dx = b.x - crowdCenterX, dy = b.y - crowdCenterY; const L = Math.hypot(dx,dy) || 1; flockFleeX = dx/L * 1.8; flockFleeY = dy/L * 1.8;
+      }
+
+      let vx = tgtX * 0.9 + zoneBiasX * 1.0 + sepX * 1.1 + flockFleeX;
+      let vy = tgtY * 0.9 + zoneBiasY * 1.0 + sepY * 0.9;
+
+      // apply jitter rotation
+      const ang = Math.atan2(vy, vx) + jitterAngle;
+      vx = Math.cos(ang);
+      vy = Math.sin(ang);
+
+      // move
+      b.x += vx * b.speed * dt;
+      b.y += vy * b.speed * dt;
+
+      // clamp to arena
+      if(b.x < 20) b.x = 20; if(b.x > WIDTH()-20) b.x = WIDTH()-20; if(b.y < 20) b.y = 20; if(b.y > HEIGHT()-20) b.y = HEIGHT()-20;
+
+      // shooting: target nearest alive (not random)
+      b.cooldown -= dt;
+      if(b.cooldown <= 0){
+        b.cooldown = 0.8 + Math.random()*1.4;
+        if(nearest && nearest.alive && nearest !== b){
+          const angShoot = Math.atan2(nearest.y - b.y, nearest.x - b.x);
+          fire(b, angShoot, 460, 14);
+        }
+      }
+    }
+
+
+    // physics
+    function step(dt){
+      if(gameOver) return; // stop updating when the game is over
+      if(!player.spawned) { player.x = WIDTH()/2; player.y = HEIGHT()/2; player.spawned = true; }
+      // player movement
+      if(player.alive){ let dx=0, dy=0; if(keys['w']||keys['arrowup']) dy -= 1; if(keys['s']||keys['arrowdown']) dy += 1; if(keys['a']||keys['arrowleft']) dx -= 1; if(keys['d']||keys['arrowright']) dx += 1; if(dx || dy){ const len = Math.hypot(dx,dy); dx/=len; dy/=len; player.x += dx * player.speed * dt; player.y += dy * player.speed * dt; }
+        // clamp
+        player.x = Math.max(8, Math.min(WIDTH()-8, player.x)); player.y = Math.max(8, Math.min(HEIGHT()-8, player.y));
+      }
+
+      // bots
+      for(const b of bots) botUpdate(b, dt);
+
+      // bullets
+      for(let i=bullets.length-1;i>=0;i--){ const bb = bullets[i]; bb.x += bb.vx*dt; bb.y += bb.vy*dt; bb.life -= dt; // collision with players
+        if(bb.life <= 0){ bullets.splice(i,1); continue; }
+        // boundaries
+        if(bb.x < -20 || bb.x > WIDTH()+20 || bb.y < -20 || bb.y > HEIGHT()+20){ bullets.splice(i,1); continue; }
+        // hit detection: check player and bots
+        if(bb.owner !== player.id && player.alive && Math.hypot(player.x-bb.x, player.y-bb.y) < player.size+3){ player.hp -= bb.damage; bullets.splice(i,1); if(player.hp <= 0){ player.alive = false; onPlayerDeath(); } continue; }
+        for(const b of bots){ if(bb.owner !== b.id && b.alive && Math.hypot(b.x-bb.x, b.y-bb.y) < b.size+3){ b.hp -= bb.damage; bullets.splice(i,1); if(b.hp <= 0) { b.alive = false; } break; } }
+      }
+
+      // bullets fired by any shooters handled above
+
+      // safe zone shrink
+      zone.shrinkTimer -= dt;
+      if(zone.shrinkTimer <= 0){ // create new smaller zone target
+        shrinkPhase++; zone.shrinkTimer = shrinkInterval; const newR = zone.r * 0.66; zone.r = Math.max(40, newR); // shrink immediately a bit
+        // move center slightly
+        zone.x += rand(-80,80); zone.y += rand(-80,80); zone.x = Math.max(80, Math.min(WIDTH()-80, zone.x)); zone.y = Math.max(80, Math.min(HEIGHT()-80, zone.y));
+      }
+
+      // damage outside zone
+      const outside = (pt)=> Math.hypot(pt.x - zone.x, pt.y - zone.y) > zone.r;
+      if(player.alive && outside(player)){ player.hp -= 12*dt; if(player.hp <= 0){ player.alive = false; onPlayerDeath(); } }
+      for(const b of bots){ if(b.alive && outside(b)){ b.hp -= 10*dt; if(b.hp <=0) b.alive=false; } }
+
+      // check victory: if player alive and no bots remain
+      const aliveBots = bots.filter(b=>b.alive).length;
+      if(player.alive && aliveBots === 0){ onPlayerVictory(); }
+    }
+
+  function onPlayerDeath(){ gameOver = true; document.getElementById('overlayText').textContent = 'Vous êtes éliminé !'; document.getElementById('overlay').classList.add('show'); }
+
+  function onPlayerVictory(){ gameOver = true; document.getElementById('overlayText').textContent = 'Victoire ! Vous êtes le dernier survivant.'; document.getElementById('overlay').classList.add('show'); }
+
+    // draw
+    function draw(){ ctx.clearRect(0,0,WIDTH(),HEIGHT()); // background
+      ctx.fillStyle = '#071021'; ctx.fillRect(0,0,WIDTH(),HEIGHT());
+      // safe zone
+      ctx.beginPath(); ctx.fillStyle = 'rgba(25,240,255,0.02)'; ctx.arc(zone.x, zone.y, zone.r, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle='rgba(25,240,255,0.06)'; ctx.lineWidth=2; ctx.stroke();
+      // bots
+      for(const b of bots){ if(!b.alive) continue; ctx.beginPath(); ctx.fillStyle = '#ff9f9f'; ctx.arc(b.x, b.y, b.size, 0, Math.PI*2); ctx.fill(); ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.font='10px sans-serif'; ctx.textAlign='center'; ctx.fillText(Math.floor(b.hp), b.x, b.y+3); }
+      // player
+      if(player.alive){ ctx.beginPath(); ctx.fillStyle = '#fff'; ctx.arc(player.x, player.y, player.size, 0, Math.PI*2); ctx.fill(); ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.font='12px sans-serif'; ctx.textAlign='center'; ctx.fillText(Math.floor(player.hp), player.x, player.y+4); }
+      // bullets
+      for(const bb of bullets){ ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(bb.x, bb.y, 3, 0, Math.PI*2); ctx.fill(); }
+      // HUD update
+      const aliveCount = (bots.filter(b=>b.alive).length + (player.alive?1:0)); document.getElementById('players').textContent = 'Joueurs: ' + aliveCount; document.getElementById('zone').textContent = 'Zone r: ' + Math.floor(zone.r); document.getElementById('hp').textContent = 'HP: ' + Math.max(0, Math.floor(player.hp));
+    }
+
+    let last = performance.now(); function loop(now){ const dt = Math.min(40, now-last)/1000; last = now; step(dt); draw(); requestAnimationFrame(loop); }
+    requestAnimationFrame(loop);
+
+    // helpers
+    function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a }
+
+    // reset/start
+    function resetGame(){ // reset player
+      player.x = WIDTH()/2; player.y = HEIGHT()/2; player.hp = 100; player.alive = true; player.spawned = true; bullets.length = 0; bots.length = 0; for(let i=0;i<BOT_COUNT;i++) bots.push(spawnBot(i)); zone.x = WIDTH()/2; zone.y = HEIGHT()/2; zone.r = Math.min(WIDTH(),HEIGHT())*0.45; zone.shrinkTimer = shrinkInterval; document.getElementById('overlay').classList.remove('show'); gameOver = false; }
+
+    document.getElementById('playAgain').addEventListener('click', ()=>{ resetGame(); });
+    document.getElementById('reset').addEventListener('click', ()=>{ resetGame(); });
+    document.getElementById('back').addEventListener('click', ()=>{ location.href='../index.html' });
+
+    // initial spawn
+    resetGame();
+
+    // expose small debug control
+    window.DEBUG = { bullets, bots, player };
+  </script>
+</body>
+</html>

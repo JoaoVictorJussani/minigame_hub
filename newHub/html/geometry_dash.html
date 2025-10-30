@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Geometry Dash - Mini</title>
+  <style>
+    :root{--bg:#071021;--fg:#e6f7ff;--accent:#ff4fcc}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#071021,#0f1a2b);font-family:Inter,Segoe UI,Roboto,Arial;color:var(--fg)}
+    #game{display:block;width:100vw;height:100vh}
+    .ui{position:fixed;left:12px;top:12px;z-index:30;background:rgba(0,0,0,0.3);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04)}
+    .ui button{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--fg);padding:6px 10px;border-radius:8px;cursor:pointer}
+    .hud{position:fixed;right:12px;top:12px;background:rgba(0,0,0,0.3);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04)}
+    .center{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:40;background:rgba(0,0,0,0.5);padding:18px;border-radius:12px;border:1px solid rgba(255,255,255,0.06)}
+    .center button{margin-top:10px}
+    small{display:block;color:rgba(255,255,255,0.6)}
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div class="ui">
+    <button id="back">← Retour</button>
+    <button id="reset">Recommencer</button>
+  </div>
+
+  <div class="hud">
+    <div id="score">Distance: 0</div>
+    <small>Appuyez sur Espace / Clic pour sauter</small>
+  </div>
+
+  <div class="center" id="overlay">
+    <div id="overlayText">Prêt ?</div>
+    <button id="start">Jouer</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    let DPR = Math.max(1, window.devicePixelRatio || 1);
+
+    function resize(){
+      DPR = Math.max(1, window.devicePixelRatio || 1);
+      canvas.width = Math.floor(window.innerWidth * DPR);
+      canvas.height = Math.floor(window.innerHeight * DPR);
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+      ctx.setTransform(DPR,0,0,DPR,0,0);
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Game constants
+    const GROUND_Y = () => canvas.height/DPR - 110; // ground y coordinate
+    const GRAVITY = 1500; // px/s^2
+    const JUMP_V = -650; // initial jump velocity
+    const SCROLL_SPEED_START = 320; // px/s
+
+    // Player (fixed x, vertical movement only)
+    const player = { x: 120, y: 0, vy:0, w: 44, h:44, alive:true };
+
+    // Obstacles: array of {x,w,h,type}
+    const obstacles = [];
+    let spawnTimer = 0;
+    let spawnInterval = 1.0; // seconds
+
+    let distance = 0;
+    let speed = SCROLL_SPEED_START;
+    let running = false;
+    let last = performance.now();
+
+    function reset(){
+      obstacles.length = 0; spawnTimer = 0; distance = 0; speed = SCROLL_SPEED_START;
+      player.y = GROUND_Y() - player.h; player.vy = 0; player.alive = true; running = false; document.getElementById('overlay').style.display='block'; document.getElementById('overlayText').textContent='Prêt ?';
+    }
+
+    // spawn logic: random obstacles and simple gaps
+    function spawnObstacle(){
+      const type = Math.random() < 0.6 ? 'spike' : 'block';
+      if(type === 'spike'){
+        const w = 28; const h = 42; const x = WIDTH() + 30; obstacles.push({x,w,h,type});
+      } else {
+        const w = 40 + Math.random()*70; const h = 40 + Math.random()*70; const x = WIDTH() + 30; obstacles.push({x,w,h,type});
+      }
+    }
+
+    function WIDTH(){ return canvas.width / DPR }
+    function HEIGHT(){ return canvas.height / DPR }
+
+    function update(dt){
+      if(!running) return;
+      // physics
+      player.vy += GRAVITY * dt;
+      player.y += player.vy * dt;
+      const ground = GROUND_Y() - player.h;
+      if(player.y > ground){ player.y = ground; player.vy = 0; }
+
+      // spawn
+      spawnTimer -= dt;
+      if(spawnTimer <= 0){ spawnObstacle(); spawnTimer = spawnInterval * (0.7 + Math.random()*0.6); }
+
+      // move obstacles
+      for(let i=obstacles.length-1;i>=0;i--){
+        const ob = obstacles[i]; ob.x -= speed * dt;
+        // remove off-screen
+        if(ob.x + ob.w < -50) obstacles.splice(i,1);
+      }
+
+      // collisions (AABB)
+      for(const ob of obstacles){
+        const obTop = (ob.type==='spike') ? (GROUND_Y() - ob.h) : (GROUND_Y() - ob.h);
+        const obRect = { x: ob.x, y: obTop, w: ob.w, h: ob.h };
+        const pr = { x: player.x, y: player.y, w: player.w, h: player.h };
+        if(rectIntersect(pr, obRect)){
+          player.alive = false; running = false; document.getElementById('overlay').style.display='block'; document.getElementById('overlayText').textContent='Vous avez perdu ! Distance: ' + Math.floor(distance);
+        }
+      }
+
+      // progress
+      distance += speed * dt * 0.02; // scaled distance
+      // gradually speed up every few seconds
+      speed += 2.5 * dt;
+    }
+
+    function rectIntersect(a,b){ return !(a.x + a.w < b.x || a.x > b.x + b.w || a.y + a.h < b.y || a.y > b.y + b.h); }
+
+    function draw(){
+      // clear
+      ctx.clearRect(0,0,WIDTH(),HEIGHT());
+      // background subtle
+      ctx.fillStyle = '#071021'; ctx.fillRect(0,0,WIDTH(),HEIGHT());
+
+      // ground
+      const gy = GROUND_Y();
+      ctx.fillStyle = '#0f2a3a'; ctx.fillRect(0, gy, WIDTH(), HEIGHT()-gy);
+      // decorative grid
+      ctx.strokeStyle = 'rgba(255,255,255,0.03)'; ctx.lineWidth=1;
+      for(let x=0;x<WIDTH();x+=40){ ctx.beginPath(); ctx.moveTo(x,gy); ctx.lineTo(x,gy+8); ctx.stroke(); }
+
+      // obstacles
+      for(const ob of obstacles){
+        const obTop = GROUND_Y() - ob.h;
+        if(ob.type === 'spike'){
+          // draw triangle spike
+          ctx.fillStyle = '#ff4fcc'; ctx.beginPath(); ctx.moveTo(ob.x, obTop+ob.h); ctx.lineTo(ob.x+ob.w/2, obTop); ctx.lineTo(ob.x+ob.w, obTop+ob.h); ctx.closePath(); ctx.fill();
+        } else {
+          ctx.fillStyle = '#19f0ff'; ctx.fillRect(ob.x, obTop, ob.w, ob.h);
+        }
+      }
+
+      // player
+      ctx.fillStyle = '#fff'; ctx.fillRect(player.x, player.y, player.w, player.h);
+
+      // HUD drawn via DOM elements, update score
+      document.getElementById('score').textContent = 'Distance: ' + Math.floor(distance);
+    }
+
+    function loop(now){
+      const dt = Math.min(40, now - last) / 1000; last = now;
+      update(dt); draw(); requestAnimationFrame(loop);
+    }
+
+    // inputs
+    function jump(){ if(!player.alive) return; if(!running){ startGame(); return; } const ground = GROUND_Y() - player.h; if(player.y >= ground - 0.5){ player.vy = JUMP_V; } }
+    window.addEventListener('keydown', (e)=>{ if(e.code === 'Space' || e.key === ' ') { e.preventDefault(); jump(); } });
+    window.addEventListener('mousedown', (e)=>{ jump(); });
+    window.addEventListener('touchstart', (e)=>{ e.preventDefault(); jump(); }, {passive:false});
+
+    // start/reset handlers
+    function startGame(){ document.getElementById('overlay').style.display='none'; running = true; last = performance.now(); }
+    document.getElementById('start').addEventListener('click', ()=>{ startGame(); });
+    document.getElementById('reset').addEventListener('click', ()=>{ reset(); });
+    document.getElementById('back').addEventListener('click', ()=>{ location.href='../index.html' });
+
+    // initial setup
+    reset();
+    requestAnimationFrame(loop);
+
+    // safe resize: keep player on ground
+    window.addEventListener('resize', ()=>{ player.y = Math.min(player.y, GROUND_Y() - player.h); });
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>RPS Battle Royale</title>
+  <style>
+    :root{--bg:#071021;--fg:#eafcff;--muted:rgba(255,255,255,0.7);--accent:#19f0ff}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#071021,#0f1a2b);font-family:Inter,Segoe UI,Roboto,Arial;color:var(--fg)}
+    .wrap{max-width:1000px;margin:20px auto;padding:20px}
+    header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    h1{margin:0;font-size:1.3rem}
+    .controls{display:flex;gap:8px}
+    button.btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 12px;border-radius:8px;color:var(--fg);cursor:pointer}
+    .board{display:flex;gap:12px;margin-top:18px}
+    .participants{flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+    .p-card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.04);padding:8px;border-radius:8px;text-align:center}
+    .dead{opacity:0.28;text-decoration:line-through}
+    .actions{width:280px;min-width:220px}
+    .choice{display:flex;gap:6px;margin-bottom:12px}
+    .choice button{flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--fg);cursor:pointer}
+    .log{margin-top:14px;background:rgba(0,0,0,0.2);padding:10px;border-radius:8px;height:210px;overflow:auto;border:1px solid rgba(255,255,255,0.03)}
+    .badge{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,0.03);font-size:0.85rem}
+    .result-win{color:#7cff7c}
+    .result-lose{color:#ff7c7c}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>🪨✂️📄 RPS Battle Royale</h1>
+        <div class="muted">Affrontez plusieurs bots dans des éliminations par paires — soyez le dernier en vie !</div>
+      </div>
+      <div class="controls">
+        <button class="btn" id="back">← Retour</button>
+        <button class="btn" id="reset">Nouvelle partie</button>
+      </div>
+    </header>
+
+    <div class="board">
+      <div class="participants" id="participants" aria-live="polite"></div>
+
+      <aside class="actions">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>Round: <span id="round">0</span></div>
+          <div class="badge" id="aliveCount">0 alive</div>
+        </div>
+
+        <div style="margin-top:12px">
+          <div class="choice">
+            <button data-move="rock" id="rockBtn">🪨 Rock</button>
+            <button data-move="paper" id="paperBtn">📄 Paper</button>
+            <button data-move="scissors" id="scissorsBtn">✂️ Scissors</button>
+          </div>
+          <button class="btn" id="playRound">Jouer le round</button>
+        </div>
+
+        <div class="log" id="log"></div>
+        <div style="margin-top:8px;font-size:0.9rem;color:var(--muted)">Bots pick randomly. If tied, a random winner is chosen to keep the game moving.</div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    // Simple RPS Battle Royale
+    const participantsEl = document.getElementById('participants');
+    const logEl = document.getElementById('log');
+    const roundEl = document.getElementById('round');
+    const aliveBadge = document.getElementById('aliveCount');
+
+    const N_BOTS = 15; // default number of bots (tune for difficulty)
+
+    const moves = ['rock','paper','scissors'];
+    const beats = { rock: 'scissors', scissors: 'paper', paper: 'rock' };
+
+    let participants = []; // {id, name, isPlayer, alive, color}
+    let playerChoice = null;
+    let round = 0;
+
+    function randName(i){ const names = ['Alpha','Bravo','Charlie','Delta','Echo','Foxtrot','Golf','Hotel','India','Juliet','Kilo','Lima','Mike','Nova','Orion','Pixel','Quebec','Romeo','Sierra','Tango']; return names[i % names.length] + (Math.floor(i/20) || ''); }
+    function randColor(i){ const hue = Math.floor((i*47)%360); return `hsl(${hue}deg 70% 60%)`; }
+
+    function init(){
+      participants = [];
+      // add player first
+      participants.push({ id: 'player', name: 'Vous', isPlayer: true, alive: true, color: '#fff' });
+      for(let i=0;i<N_BOTS;i++) participants.push({ id: 'bot'+i, name: randName(i), isPlayer: false, alive: true, color: randColor(i) });
+      round = 0; playerChoice = null; render(); log('Nouvelle partie: ' + participants.length + ' participants');
+    }
+
+    function render(){
+      participantsEl.innerHTML = '';
+      const alive = participants.filter(p=>p.alive).length;
+      aliveBadge.textContent = alive + ' alive';
+      roundEl.textContent = round;
+
+      for(const p of participants){
+        const card = document.createElement('div'); card.className = 'p-card' + (p.alive? '' : ' dead');
+        card.style.borderLeft = '6px solid ' + (p.color || '#666');
+        card.innerHTML = `<div style="font-weight:600">${p.name}${p.isPlayer? ' (You)':''}</div><div style="font-size:0.9rem;margin-top:6px">${p.alive? 'Alive' : 'Eliminated'}</div>`;
+        participantsEl.appendChild(card);
+      }
+    }
+
+    function log(msg, cls){ const el = document.createElement('div'); if(cls) el.className = cls; el.textContent = msg; logEl.prepend(el); }
+
+    // choice buttons
+    document.getElementById('rockBtn').addEventListener('click', ()=>{ playerChoice='rock'; highlightChoice('rock'); });
+    document.getElementById('paperBtn').addEventListener('click', ()=>{ playerChoice='paper'; highlightChoice('paper'); });
+    document.getElementById('scissorsBtn').addEventListener('click', ()=>{ playerChoice='scissors'; highlightChoice('scissors'); });
+
+    function highlightChoice(move){ ['rockBtn','paperBtn','scissorsBtn'].forEach(id=>document.getElementById(id).style.boxShadow=''); document.getElementById(move+'Btn').style.boxShadow='0 6px 18px rgba(25,240,255,0.06)'; }
+
+    // pairing and resolving
+    function playRound(){
+      const alive = participants.filter(p=>p.alive);
+      if(alive.length <= 1){ log('Partie terminée.'); return; }
+      if(!playerChoice) { alert('Choisissez Rock / Paper / Scissors avant de lancer le round.'); return; }
+
+      round++;
+      log('--- Round ' + round + ' ---');
+
+      // everyone picks
+      const picks = {};
+      for(const p of alive){
+        if(p.isPlayer) picks[p.id] = playerChoice;
+        else picks[p.id] = moves[Math.floor(Math.random()*moves.length)];
+      }
+
+      // shuffle alive into pairs
+      const shuffled = alive.slice().sort(()=>Math.random()-0.5);
+      const winners = new Set();
+
+      for(let i=0;i<shuffled.length;i+=2){
+        const A = shuffled[i];
+        const B = shuffled[i+1];
+        if(!B){ // bye -> auto advance
+          winners.add(A.id);
+          log(`${A.name} gets a bye`, '');
+          continue;
+        }
+
+        const ma = picks[A.id], mb = picks[B.id];
+        let winnerId = null, loserId = null;
+        if(ma === mb){ // tie -> pick random winner to keep progress
+          winnerId = Math.random() < 0.5 ? A.id : B.id;
+          loserId = winnerId === A.id ? B.id : A.id;
+          log(`${A.name} (${ma}) vs ${B.name} (${mb}) → Tie → random winner: ${participants.find(p=>p.id===winnerId).name}`);
+        } else if(beats[ma] === mb){
+          winnerId = A.id; loserId = B.id; log(`${A.name} (${ma}) beats ${B.name} (${mb}) → ${A.name} wins`, 'result-win');
+        } else {
+          winnerId = B.id; loserId = A.id; log(`${B.name} (${mb}) beats ${A.name} (${ma}) → ${participants.find(p=>p.id===winnerId).name} wins`, 'result-lose');
+        }
+
+        winners.add(winnerId);
+        // mark loser eliminated
+        const loser = participants.find(p=>p.id===loserId); if(loser) loser.alive = false;
+      }
+
+      // anyone not in winners but alive means they were bye/winners handled; mark those not winners as eliminated (for safety)
+      participants.forEach(p=>{ if(p.alive && !winners.has(p.id)) { /* they might have been eliminated above */ } });
+
+      // survivors set is winners
+      participants.forEach(p=>{ if(!winners.has(p.id)) p.alive = p.isPlayer ? p.alive : p.alive; /* keep player alive status as set */ });
+
+      // If player was not in winners and got eliminated already, mark
+      const playerAlive = participants.find(p=>p.id==='player').alive;
+      render();
+
+      const aliveCount = participants.filter(p=>p.alive).length;
+      log(`Survivants après round: ${aliveCount}`);
+
+      // check finished
+      if(aliveCount <= 1){
+        const winner = participants.find(p=>p.alive);
+        if(winner){
+          if(winner.isPlayer) { alert('Félicitations — vous avez gagné le Battle Royale !'); log('You win 🎉'); }
+          else { alert('Vous avez été éliminé. Le gagnant: ' + winner.name); log('You lose 😢'); }
+        }
+      }
+
+      // reset player's choice so they must pick again next round (optional)
+      playerChoice = null; ['rockBtn','paperBtn','scissorsBtn'].forEach(id=>document.getElementById(id).style.boxShadow='');
+    }
+
+    function logClear(){ logEl.innerHTML = ''; }
+
+    document.getElementById('playRound').addEventListener('click', playRound);
+    document.getElementById('reset').addEventListener('click', ()=>{ init(); logClear(); });
+    document.getElementById('back').addEventListener('click', ()=>{ location.href='../index.html' });
+
+    // start initial
+    init();
+    render();
+  </script>
+</body>
+</html>
