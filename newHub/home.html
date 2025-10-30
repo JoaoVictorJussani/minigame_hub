@@ -5,26 +5,207 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Accueil — Minigame Hub</title>
   <style>
-    body{font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;margin:0;min-height:100vh;background:linear-gradient(180deg,#071021,#0f1a2b);color:#e6f7ff;display:flex;align-items:center;justify-content:center}
-    .box{max-width:920px;padding:48px;border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);box-shadow:0 20px 60px rgba(2,6,23,0.6);text-align:center}
-    h1{margin:0 0 6px;font-size:2.1rem}
-    p.lead{color:rgba(230,247,255,0.8);margin:0 0 18px}
-    .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:22px}
-    .btn{padding:12px 18px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,0.06);color:inherit;text-decoration:none;cursor:pointer}
-    .hero-note{color:rgba(255,255,255,0.6);margin-top:14px}
+    :root{
+      --bg1: #060814; --bg2:#07182a;
+      --glass: rgba(255,255,255,0.04);
+      --muted: rgba(230,247,255,0.88);
+      --accent1: #7cff7c; --accent2: #19f0ff; --accent3: #ff4fcc;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0}
+    body{
+      font-family: Inter, 'Segoe UI', Roboto, Arial, sans-serif;
+      background: radial-gradient(900px 420px at 10% 12%, rgba(25,10,50,0.14), transparent), linear-gradient(180deg,var(--bg1), var(--bg2));
+      color:var(--muted); -webkit-font-smoothing:antialiased; display:flex; align-items:center; justify-content:center; padding:28px;
+    }
+    .container{width:100%;max-width:1100px}
+  .container{width:100%;max-width:1100px;position:relative;z-index:2}
+  .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent); border-radius:16px; padding:36px; box-shadow: 0 20px 50px rgba(2,6,23,0.55); border:1px solid rgba(255,255,255,0.03);position:relative;z-index:2}
+    .hero{display:flex; gap:28px; align-items:center}
+    .hero-left{flex:1}
+    .hero-right{width:320px;display:flex;align-items:center;justify-content:center}
+    h1{font-size:2.1rem;margin:0 0 12px;color:#fff;letter-spacing:0.2px}
+    p.lead{margin:0 0 20px;color:rgba(230,247,255,0.85);line-height:1.45}
+    .cta-row{display:flex;gap:12px;flex-wrap:wrap}
+    .btn{display:inline-flex;align-items:center;gap:10px;padding:12px 18px;border-radius:12px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--muted);text-decoration:none;cursor:pointer;transition:transform .18s ease, box-shadow .18s}
+    .btn:hover{transform:translateY(-4px);box-shadow:0 12px 30px rgba(0,0,0,0.45)}
+    .btn-primary{background:linear-gradient(90deg,var(--accent1),var(--accent2) 45%,var(--accent3)); color:#071021; border:none; font-weight:600}
+    .btn-ghost{background:transparent}
+    .panel{width:280px;height:280px;border-radius:16px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+    .panel::before{content:'';position:absolute;inset:-40%;background:conic-gradient(from 200deg at 50% 50%, rgba(255,79,79,0.06), rgba(25,240,255,0.06), rgba(124,255,124,0.06));filter:blur(30px);opacity:0.9}
+    .panel-art{position:relative;z-index:2;text-align:center}
+    .panel-art img{width:140px;height:auto;display:block;margin:0 auto}
+    .panel-caption{position:absolute;left:12px;bottom:12px;font-size:0.85rem;color:rgba(255,255,255,0.72)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:24px}
+    .tile{padding:14px;border-radius:12px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03);display:flex;align-items:flex-start;gap:12px}
+    .tile h3{margin:0;font-size:1rem;color:#fff}
+    .tile p{margin:6px 0 0;color:rgba(255,255,255,0.65);font-size:0.9rem}
+    .foot{margin-top:18px;text-align:center;color:rgba(255,255,255,0.55);font-size:0.9rem}
+    @media (max-width:860px){ .hero{flex-direction:column-reverse;align-items:stretch} .hero-right{width:100%;order:1} .panel{width:100%;height:200px} }
+    code{background:rgba(255,255,255,0.03);padding:2px 6px;border-radius:6px;color:var(--muted)}
+
+    /* Organic animated background (blobs + particles) */
+    .organic-bg{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+
+    /* blob wrapper receives parallax; inner element animates independently */
+    .organic-bg .blob{position:absolute;left:0;top:0;will-change:transform;transform:translate3d(0,0,0)}
+    .organic-bg .blob .blob-inner{position:absolute;inset:0;border-radius:50%;mix-blend-mode:screen;filter:blur(24px);opacity:.95;transition:opacity .3s ease}
+
+    @keyframes blobDrift{
+      0%{transform:translate3d(0,0,0) scale(1) rotate(0deg);opacity:0.95}
+      25%{transform:translate3d(var(--tx,30px),var(--ty,-20px),0) scale(1.04) rotate(6deg);opacity:1}
+      50%{transform:translate3d(calc(var(--tx,30px) * -1),calc(var(--ty,-20px) * -1),0) scale(1.02) rotate(-4deg);opacity:0.95}
+      75%{transform:translate3d(var(--tx,30px),calc(var(--ty,-20px) * 0.6),0) scale(1.03) rotate(2deg);opacity:1}
+      100%{transform:translate3d(0,0,0) scale(1) rotate(0deg);opacity:0.95}
+    }
+
+    .organic-bg .blob .blob-inner{animation: blobDrift var(--dur,28s) ease-in-out infinite}
+
+    /* color-rich particles */
+    .organic-bg .particle{position:absolute;border-radius:50%;filter:blur(.6px);will-change:transform,opacity}
+    @keyframes floatUp{0%{transform:translateY(0) scale(0.8);opacity:0}10%{opacity:.9}100%{transform:translateY(-180px) scale(1.2);opacity:0}}
+
+    /* reduce motion for low-power devices */
+    @media (prefers-reduced-motion: reduce){
+      .organic-bg .blob .blob-inner,.organic-bg .particle{animation:none !important;transition:none !important}
+    }
   </style>
 </head>
 <body>
-  <div class="box">
-    <h1>Bienvenue sur le Minigame Hub</h1>
-    <p class="lead">Un petit endroit pour retrouver et lancer des jeux rapides — parcourez par genre ou allez directement au hub de jeux.</p>
-    <div class="row">
-      <a class="btn" href="./index.html">🎮 Lancer le Hub</a>
-      <a class="btn" href="./html/arcade_index.html">🕹️ Arcade</a>
-      <a class="btn" href="./html/puzzle_index.html">🧩 Puzzle</a>
-      <a class="btn" href="#about">ℹ️ À propos</a>
+  <!-- Organic animated background (generated by script) -->
+  <div class="organic-bg" aria-hidden="true"></div>
+
+  <div class="container">
+    <div class="card">
+      <div class="hero">
+        <div class="hero-left">
+          <h1>Minigame Hub — joue vite, retrouve tout</h1>
+          <p class="lead">Retrouve tes jeux préférés en un instant. Parcours par genre, lance directement, découvre de nouveaux classiques et amuse-toi.</p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="./index.html">🎮 Ouvrir le Hub</a>
+            <a class="btn btn-ghost" href="./html/arcade_index.html">🕹️ Voir Arcade</a>
+            <a class="btn btn-ghost" href="./html/puzzle_index.html">🧩 Voir Puzzle</a>
+          </div>
+
+          <div class="grid" style="margin-top:22px">
+            <div class="tile"><div><h3>Rapide</h3><p>Jeux à lancer en 1 clic, parfaits pour une pause.</p></div></div>
+            <div class="tile"><div><h3>Local</h3><p>Tous les jeux sont servis depuis ce repo — pas besoin d'internet.</p></div></div>
+            <div class="tile"><div><h3>Mobile-friendly</h3><p>Contrôles tactiles et design adaptatif.</p></div></div>
+            <div class="tile"><div><h3>Contribue</h3><p>Ajoute un jeu en créant une page sous <code>html/</code>.</p></div></div>
+          </div>
+        </div>
+
+        <div class="hero-right">
+          <div class="panel">
+            <div class="panel-art">
+              <img src="images/spaceship.png" alt="vaisseau"/>
+            </div>
+            <div class="panel-caption">Essaye Space Blaster pour commencer</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="foot">Besoin d'une organisation différente ? Dis-moi comment tu veux trier les jeux (par durée, par joueur, etc.)</div>
     </div>
-    <div class="hero-note" id="about">Astuce: utilisez la recherche dans le hub pour trouver rapidement un jeu. Tu peux modifier les pages de catégories si tu veux organiser autrement.</div>
   </div>
+  <script>
+    (function(){
+      const bg = document.querySelector('.organic-bg');
+      if(!bg) return;
+
+      // richer blob palette with vivid tints
+      const blobs = [
+        {w:560,h:560,left:'6%',top:'8%',colors:['rgba(124,255,124,0.22)','rgba(25,240,255,0.12)']},
+        {w:460,h:460,left:'68%',top:'4%',colors:['rgba(25,240,255,0.18)','rgba(124,255,124,0.08)']},
+        {w:680,h:680,left:'28%',top:'44%',colors:['rgba(255,79,79,0.18)','rgba(255,127,196,0.06)']},
+        {w:380,h:380,left:'82%',top:'62%',colors:['rgba(124,255,124,0.12)','rgba(255,79,79,0.06)']},
+        {w:320,h:320,left:'10%',top:'74%',colors:['rgba(25,240,255,0.12)','rgba(255,127,196,0.04)']},
+        {w:500,h:500,left:'52%',top:'14%',colors:['rgba(255,200,80,0.14)','rgba(255,79,79,0.06)']}
+      ];
+
+      blobs.forEach((b,i)=>{
+        const wrap = document.createElement('div');
+        wrap.className = 'blob';
+        wrap.style.width = b.w + 'px';
+        wrap.style.height = b.h + 'px';
+        wrap.style.left = b.left;
+        wrap.style.top = b.top;
+        // set travel and duration variables
+        wrap.style.setProperty('--dur', (12 + Math.round(Math.random()*26)) + 's');
+        wrap.style.setProperty('--tx', (30 + Math.round(Math.random()*180)) * (Math.random()>0.5?1:-1) + 'px');
+        wrap.style.setProperty('--ty', (20 + Math.round(Math.random()*140)) * (Math.random()>0.5?1:-1) + 'px');
+
+        const inner = document.createElement('div');
+        inner.className = 'blob-inner';
+        // vibrant radial gradient
+        inner.style.background = `radial-gradient(circle at 25% 25%, ${b.colors[0]} 0%, ${b.colors[1]} 40%, transparent 65%)`;
+        // slightly less blur for clarity
+        inner.style.filter = 'blur(18px)';
+        wrap.appendChild(inner);
+        bg.appendChild(wrap);
+      });
+
+      // colorful particles
+      const particleCount = 44;
+      const particleColors = ['rgba(255,255,255,0.12)','rgba(124,255,124,0.12)','rgba(25,240,255,0.12)','rgba(255,79,79,0.10)','rgba(255,200,80,0.10)'];
+      for(let i=0;i<particleCount;i++){
+        const p = document.createElement('div');
+        p.className = 'particle';
+        const size = 2 + Math.round(Math.random()*8);
+        p.style.width = p.style.height = size + 'px';
+        p.style.left = Math.round(Math.random()*100) + '%';
+        p.style.top = Math.round(Math.random()*100) + '%';
+        const dur = (6 + Math.random()*18).toFixed(2) + 's';
+        p.style.animation = `floatUp ${dur} linear ${Math.random()*-18}s infinite`;
+        p.style.background = particleColors[Math.floor(Math.random()*particleColors.length)];
+        p.style.opacity = (0.05 + Math.random()*0.9).toFixed(2);
+        bg.appendChild(p);
+      }
+
+      // subtle parallax on pointer move: only adjust wrapper transform so inner animation still runs
+      const wrapEls = Array.from(bg.querySelectorAll('.blob'));
+      let lastX = 0, lastY = 0;
+      function pointer(e){
+        const rect = document.documentElement.getBoundingClientRect();
+        const cx = rect.width/2, cy = rect.height/2;
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const dx = (clientX - cx)/cx; // -1..1
+        const dy = (clientY - cy)/cy;
+
+        wrapEls.forEach((el, idx)=>{
+          const depth = 6 + idx*2; // layering depth
+          const px = dx * depth * (idx%2?0.6:1.0);
+          const py = dy * depth * (idx%2?0.5:1.0) * -1;
+          // lerp for smoothness
+          const cur = el._tx || 0; const curY = el._ty || 0;
+          el._tx = cur + (px - cur) * 0.12;
+          el._ty = curY + (py - curY) * 0.12;
+          el.style.transform = `translate3d(${el._tx}px, ${el._ty}px, 0)`;
+        });
+      }
+
+      // smooth follow (throttle using requestAnimationFrame)
+      let queued = false;
+      function handler(e){
+        lastX = e.clientX || (e.touches && e.touches[0].clientX) || lastX;
+        lastY = e.clientY || (e.touches && e.touches[0].clientY) || lastY;
+        if(queued) return; queued = true;
+        requestAnimationFrame(()=>{ pointer({clientX:lastX, clientY:lastY}); queued=false; });
+      }
+
+      window.addEventListener('pointermove', handler, {passive:true});
+      window.addEventListener('touchmove', handler, {passive:true});
+
+      // pause animations when not visible
+      document.addEventListener('visibilitychange', ()=>{
+        if(document.hidden){
+          bg.querySelectorAll('.blob-inner, .particle').forEach(el=>el.style.animationPlayState='paused');
+        } else {
+          bg.querySelectorAll('.blob-inner, .particle').forEach(el=>el.style.animationPlayState='running');
+        }
+      });
+    })();
+  </script>
 </body>
 </html>
