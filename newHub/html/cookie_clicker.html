@@ -93,8 +93,13 @@
 			text-align:center;
 			padding:20px;
 			min-width:360px;
+			/* rendre le panneau de gauche collant pour rester visible lors du scroll */
+			position:sticky;
+			top:32px;
+			align-self:flex-start;
+			z-index:3;
 		}
-
+ 
 		.right{
 			/* largura aumentada para acomodar elementos maiores */
 			width:720px;
@@ -102,6 +107,10 @@
 			display:flex;
 			flex-direction:column;
 			gap:14px;
+			/* limite de hauteur lié à la fenêtre : la colonne droite reste fixe,
+			   seul le contenu de la boutique (items) défilera */
+			max-height: calc(100vh - 64px);
+			overflow: hidden;
 		}
 
 		.cookie-num{ font-size:20px; font-weight:700; margin-bottom:8px; color:#fff }
@@ -123,55 +132,41 @@
 
 		.info{ display:flex; justify-content:space-between; margin-top:8px; color:rgba(255,255,255,0.7); font-size:14px }
 
-		.items{ display:flex; flex-direction:column; gap:10px; margin-top:6px; }
+		.items{
+			display:grid;
+			grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+			gap:12px;
+			margin-top:8px;
+			overflow:auto;
+			max-height: calc(100vh - 64px - 140px);
+			padding:8px;
+		}
 
+		/* nouveau style item : carte compacte */
 		.item{
-			display:flex; justify-content:space-between; align-items:center;
-			padding:8px; border-radius:10px;
-			background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.002));
-			border:1px solid rgba(255,255,255,0.025);
-			font-size:0.95rem;
+			display:flex;
+			flex-direction:column;
+			gap:8px;
+			padding:12px;
+			border-radius:12px;
+			background: linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.003));
+			border:1px solid rgba(255,255,255,0.03);
+			min-height:110px;
+			justify-content:space-between;
+			transition:transform .14s ease, box-shadow .14s ease;
 		}
-
-		.item .left{ text-align:left; }
-		.small{ font-size:13px; color:rgba(255,255,255,0.78) }
-
-		/* preço como badge mais discreto */
-		.item .meta { display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
-		.price-badge{
-			background:rgba(0,0,0,0.03); padding:6px 8px; border-radius:8px;
-			font-weight:700; color:var(--muted); border:1px solid rgba(255,255,255,0.02); font-size:0.85rem;
-		}
-
-		/* botões mais compactos */
-		button.buy{
-			background:linear-gradient(90deg,var(--neon-cyan), #6aaef8);
-			color:#071021; border:0; padding:8px 10px; border-radius:12px; cursor:pointer; font-weight:700;
-			display:inline-flex; gap:8px; align-items:center; box-shadow:0 10px 28px rgba(25,240,255,0.06);
-			transition:transform .12s ease, box-shadow .12s ease, opacity .12s;
-			font-size:0.93rem;
-		}
-		button.buy:hover:not(:disabled){ transform:translateY(-2px); box-shadow:0 16px 40px rgba(25,240,255,0.10); }
-		button.buy:disabled{ opacity:0.82; }
-
-		/* botões de controle superiores */
-		#saveBtn, #resetBtn{ padding:10px 14px; border-radius:12px; font-weight:800; display:inline-flex; gap:8px; align-items:center; font-size:0.95rem; }
-
-		/* log maior e mais alto */
-		#log.small{ margin-top:8px; max-height:180px !important; overflow:auto; font-size:0.95rem; color:rgba(255,255,255,0.85); padding-right:4px; }
-
-		/* ajustar pequenas infos na esquerda quando a direita está maior */
-		.stats-row .stat{ padding:8px 12px; border-radius:10px; font-weight:700; font-size:0.95rem; }
-
-		/* responsive tweaks: garantir que em telas menores a direita não fiche apertada */
-		@media (max-width:980px){
-			.container{ flex-direction:column; align-items:center; padding:20px; }
-			.right{ width:100%; max-width:760px; padding:16px; }
-			.cookie-btn{ width:220px; height:220px }
-			.item{ padding:10px; font-size:0.95rem }
-			button.buy{ padding:8px 10px; font-size:0.92rem }
-			#log.small{ max-height:160px !important; }
-		}
+		.item:hover{ transform: translateY(-6px); box-shadow: 0 12px 34px rgba(2,6,23,0.45); }
+		.item .top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+		.item .meta-left { text-align:left; }
+		.item .meta-left .name { font-weight:800; color:#fff; margin-bottom:6px; }
+		.item .meta-left .effect { font-size:13px; color:rgba(255,255,255,0.78) }
+		.item .qty-badge { font-size:12px; padding:4px 6px; border-radius:8px; background:rgba(0,0,0,0.06); color:var(--muted); font-weight:700; }
+		.item .bottom { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:6px; }
+		.item .actions { display:flex; gap:8px; }
+		.item .price-badge { font-weight:800; font-size:0.95rem; padding:6px 8px; border-radius:8px; background:rgba(0,0,0,0.03); color:var(--muted); border:1px solid rgba(255,255,255,0.02); }
+		/* highlight affordable items */
+		.item.affordable { box-shadow: 0 10px 30px rgba(25,240,255,0.04); border-color: rgba(25,240,255,0.06); }
+		@media (max-width:520px){ .items{ grid-template-columns: 1fr; } }
 
 		/* dark theme toggle (same override as index.html) */
 		body.dark{
@@ -300,7 +295,7 @@
 			</div>
 
 			<div class="info">
-				<div>CPS : <span id="cps">0.00</span></div>
+				<div>Force de clics : <span id="cps">0.00</span></div>
 				<div>Par clic : <span id="perClick">1</span></div>
 			</div>
 
@@ -356,7 +351,18 @@ const defaultState = {
 		{ id: 'farm', name: 'Ferme', baseCost: 1100, qty: 0, cps: 8, perClickBonus: 0 },
 		{ id: 'mine', name: 'Mine', baseCost: 12000, qty: 0, cps: 47, perClickBonus: 0 },
 		{ id: 'factory', name: 'Usine', baseCost: 130000, qty: 0, cps: 260, perClickBonus: 0 },
-		{ id: 'bank', name: 'Banque', baseCost: 1400000, qty: 0, cps: 1400, perClickBonus: 0 }
+		{ id: 'bank', name: 'Banque', baseCost: 1400000, qty: 0, cps: 1400, perClickBonus: 0 },
+
+		// nouveaux items CPS (génèrent automatiquement des cookies par seconde)
+		{ id: 'assistant', name: 'Assistant', baseCost: 5000, qty: 0, cps: 15, perClickBonus: 0 },
+		{ id: 'manager', name: 'Manager', baseCost: 30000, qty: 0, cps: 90, perClickBonus: 0 },
+		{ id: 'research', name: 'Laboratoire', baseCost: 250000, qty: 0, cps: 500, perClickBonus: 0 },
+		{ id: 'ai', name: 'Serveur AI', baseCost: 2000000, qty: 0, cps: 3500, perClickBonus: 0 },
+
+		// nouveaux items par-clic (augmentent la valeur de chaque clic)
+		{ id: 'glove', name: 'Gant de Clic', baseCost: 200, qty: 0, cps: 0, perClickBonus: 1 },
+		{ id: 'macro', name: 'Macro', baseCost: 1500, qty: 0, cps: 0, perClickBonus: 5 },
+		{ id: 'megaFinger', name: 'Gros Doigt', baseCost: 20000, qty: 0, cps: 0, perClickBonus: 25 }
 	],
 	skins: [
 		{ id: 'classic', name: 'Classique', cost: 0, owned: true },
@@ -432,12 +438,16 @@ function loadState() {
 		const savedItemsById = (parsed.items || []).reduce((m, it) => { if (it && it.id) m[it.id] = it; return m; }, {});
 		defaultState.items.forEach(d => {
 			const s = savedItemsById[d.id] || {};
+			// restore perClickBonus as well so "par clic" items keep their effect
+			const perClick = Number(s.perClickBonus ?? d.perClickBonus);
+			const cpsVal = Number(s.cps ?? d.cps);
 			result.items.push({
 				id: d.id,
 				name: d.name || d.id,
 				baseCost: Number(s.baseCost ?? d.baseCost) || d.baseCost,
 				qty: Number(s.qty) || 0,
-				cps: Number(s.cps ?? d.cps) || d.cps
+				cps: isFinite(cpsVal) ? cpsVal : (d.cps || 0),
+				perClickBonus: isFinite(perClick) ? perClick : (d.perClickBonus || 0)
 			});
 		});
 
@@ -623,76 +633,70 @@ function applySkin() {
 }
 
 function renderAll() {
-	// infos
-	document.getElementById('cookies').textContent = fmt(state.cookies);
-	document.getElementById('cps').textContent = fmt(totalCPS());
-	document.getElementById('perClick').textContent = fmt(state.perClick);
-	document.getElementById('totalCookies').textContent = fmt(state.totalCookies);
-	document.getElementById('bestCPS').textContent = fmt(state.bestCPS);
+		// infos
+		document.getElementById('cookies').textContent = fmt(state.cookies);
+		document.getElementById('cps').textContent = fmt(totalCPS());
+		document.getElementById('perClick').textContent = fmt(state.perClick);
+		document.getElementById('totalCookies').textContent = fmt(state.totalCookies);
+		document.getElementById('bestCPS').textContent = fmt(state.bestCPS);
 
-	// items shop (DOM)
-	const itemsContainer = document.getElementById('items');
-	itemsContainer.innerHTML = '';
+		// items shop (DOM)
+		const itemsContainer = document.getElementById('items');
+		itemsContainer.innerHTML = '';
+		state.items.forEach(item => {
+			const cost1 = itemCost(item);
+			const cost10 = bulkCost(item, 10);
+			const affordable1 = Number(state.cookies) >= Number(cost1);
+			const affordable10 = Number(state.cookies) >= Number(cost10);
 
-	state.items.forEach(item => {
-		const cost1 = itemCost(item);
-		const cost10 = bulkCost(item, 10);
-		const affordable1 = Number(state.cookies) >= Number(cost1);
-		const affordable10 = Number(state.cookies) >= Number(cost10);
+			const itemEl = document.createElement('div');
+			itemEl.className = 'item';
+			if (affordable1) itemEl.classList.add('affordable');
 
-		const itemEl = document.createElement('div');
-		itemEl.className = 'item';
+			// top row: name + qty badge
+			const top = document.createElement('div'); top.className = 'top';
+			const metaLeft = document.createElement('div'); metaLeft.className = 'meta-left';
+			const nameEl = document.createElement('div'); nameEl.className = 'name'; nameEl.textContent = item.name;
 
-		const left = document.createElement('div');
-		left.className = 'left';
-		left.innerHTML = `<strong>${item.name}</strong>
-			<div class="small">+${fmt(item.cps)} CPS</div>
-			<div class="small">Possédés: ${item.qty}</div>`;
+			// effects string (CPS and/or per-click)
+			const eff = [];
+			if (Number(item.cps) && Number(item.cps) !== 0) eff.push(`${fmt(item.cps)} cps`);
+			if (Number(item.perClickBonus) && Number(item.perClickBonus) !== 0) eff.push(`${fmt(item.perClickBonus)} par clic`);
+			const effectEl = document.createElement('div'); effectEl.className = 'effect'; effectEl.textContent = eff.length ? eff.join(' · ') : '+0';
 
-		const meta = document.createElement('div');
-		meta.className = 'meta';
+			metaLeft.appendChild(nameEl);
+			metaLeft.appendChild(effectEl);
+			top.appendChild(metaLeft);
 
-		const badge = document.createElement('span');
-		badge.className = 'price-badge';
-		badge.textContent = fmt(cost1);
+			const qty = document.createElement('div'); qty.className = 'qty-badge'; qty.textContent = `×${item.qty}`;
+			top.appendChild(qty);
 
-		// buy buttons: x1 and x10
-		const btnRow = document.createElement('div');
-		btnRow.style.display = 'flex';
-		btnRow.style.gap = '8px';
+			// bottom row: price + actions
+			const bottom = document.createElement('div'); bottom.className = 'bottom';
+			const price = document.createElement('div'); price.className = 'price-badge'; price.textContent = fmt(cost1);
+			const actions = document.createElement('div'); actions.className = 'actions';
 
-		const btn1 = document.createElement('button');
-		btn1.className = 'buy';
-		btn1.textContent = 'Acheter ×1';
-		btn1.disabled = !affordable1;
-		btn1.addEventListener('click', () => { buyItem(item.id, 1); });
+			const b1 = document.createElement('button'); b1.className = 'buy'; b1.textContent = '×1';
+			b1.disabled = !affordable1; b1.title = `Acheter 1 (${fmt(cost1)})`; b1.addEventListener('click', ()=> buyItem(item.id,1));
+			const b10 = document.createElement('button'); b10.className = 'buy'; b10.textContent = `×10 (${fmt(cost10)})`;
+			b10.disabled = !affordable10; b10.title = `Acheter 10 (${fmt(cost10)})`; b10.addEventListener('click', ()=> buyItem(item.id,10));
 
-		const btn10 = document.createElement('button');
-		btn10.className = 'buy';
-		btn10.textContent = `Acheter ×10 (${fmt(cost10)})`;
-		btn10.style.fontSize = '0.85rem';
-		btn10.disabled = !affordable10;
-		btn10.addEventListener('click', () => { buyItem(item.id, 10); });
+			actions.appendChild(b1); actions.appendChild(b10);
+			bottom.appendChild(price); bottom.appendChild(actions);
 
-		btnRow.appendChild(btn1);
-		btnRow.appendChild(btn10);
+			itemEl.appendChild(top);
+			itemEl.appendChild(bottom);
+			itemsContainer.appendChild(itemEl);
+		});
 
-		meta.appendChild(badge);
-		meta.appendChild(btnRow);
+		// aplicar skin visualmente
+		applySkin();
+		// sincronizar e iniciar animação das entidades visuais (curseurs, grandmas, etc.)
+		renderEntities();
 
-		itemEl.appendChild(left);
-		itemEl.appendChild(meta);
-		itemsContainer.appendChild(itemEl);
-	});
-
-	// aplicar skin visualmente
-	applySkin();
-	// sincronizar e iniciar animação das entidades visuais (curseurs, grandmas, etc.)
-	renderEntities();
-
-	// also call renderEntities after load to initialize visuals once
-	// ensure to call once on startup (renderAll already called at the end of the script)
-	// renderEntities();
+		// also call renderEntities after load to initialize visuals once
+		// ensure to call once on startup (renderAll already called at the end of the script)
+		// renderEntities();
 }
 
 // modal functions: render / open / close
