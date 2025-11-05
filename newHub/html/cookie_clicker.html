@@ -16,6 +16,29 @@
 			--card-bg: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
 		}
 
+		
+        .footer {
+            color: rgba(255,255,255,0.45);
+            font-size: 0.95rem;
+            margin-top: 24px;
+            text-align: center;
+        }
+        .footer a {
+            display: inline-block;
+            padding: 8px 18px;
+            border-radius: 8px;
+            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-pink));
+            color: #fff !important;
+            text-decoration: none;
+            font-weight: bold;
+            box-shadow: 0 0 12px var(--neon-cyan), 0 0 12px var(--neon-pink);
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+        .footer a:hover {
+            background: linear-gradient(90deg, var(--neon-pink), var(--neon-cyan));
+            box-shadow: 0 0 24px var(--neon-pink), 0 0 24px var(--neon-cyan);
+        }
+
 		*{box-sizing:border-box}
 		body{
 			font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
@@ -157,9 +180,112 @@
 			--muted: rgba(5,10,20,0.9);
 			--glass: rgba(2,6,23,0.03);
 		}
+
+		/* new: skins UI */
+		.skins{ display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; }
+		.skin{
+			min-width:120px; padding:10px; border-radius:10px;
+			background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.002));
+			border:1px solid rgba(255,255,255,0.02); text-align:center; font-size:0.9rem;
+		}
+		.skin .name{ font-weight:800; margin-bottom:6px; }
+		.skin .cost{ font-size:0.85rem; color:rgba(255,255,255,0.75); margin-bottom:8px; }
+		.skin button{ padding:6px 8px; border-radius:8px; cursor:pointer; border:0; background:#19f0ff; color:#071021; font-weight:700; }
+		.skin button:disabled{ opacity:0.8; cursor:default }
+
+		/* modal for skins */
+		.modal-overlay{ position:fixed; inset:0; background:rgba(2,6,23,0.6); display:flex; align-items:center; justify-content:center; z-index:40; }
+		.modal { width:760px; max-width:95%; background:var(--card-bg); border-radius:12px; padding:16px; box-shadow:0 20px 60px rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.03); }
+		.modal-header{ display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; }
+		.modal-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; }
+		.modal .close-btn{ background:transparent; border:0; font-weight:800; cursor:pointer; }
+		.hidden{ display:none !important; }
+
+		/* melhorar overlay do modal (menos transparente) e estilos dos botões de controle */
+		.modal-overlay {
+			/* menos transparente para focar o modal */
+			background: rgba(2,6,23,0.88);
+		}
+
+		/* override/estilo específico para os botões de topo (salvar, reset, skins) */
+		#saveBtn, #resetBtn, #skinsBtn {
+			padding: 10px 14px;
+			border-radius: 12px;
+			font-weight: 800;
+			display: inline-flex;
+			gap: 8px;
+			align-items: center;
+			font-size: 0.95rem;
+			border: 0;
+			cursor: pointer;
+			transition: transform .12s ease, box-shadow .12s ease, opacity .12s, filter .12s;
+			outline: none;
+		}
+
+		/* salvar: cyan/verde suave */
+		#saveBtn {
+			background: linear-gradient(90deg, #6ef0c0, #19f0ff);
+			color: #05292a;
+			box-shadow: 0 10px 30px rgba(25,240,255,0.07);
+		}
+		#saveBtn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 16px 44px rgba(25,240,255,0.12); }
+		#saveBtn:focus { box-shadow: 0 0 0 4px rgba(25,240,255,0.12); }
+
+		/* reset: quente/alaranjado - atenção visual distinta */
+		#resetBtn {
+			background: linear-gradient(90deg, #ffd36a, #ff7e6a);
+			color: #3a0d00;
+			box-shadow: 0 10px 30px rgba(255,120,80,0.06);
+		}
+		#resetBtn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 16px 44px rgba(255,110,80,0.12); }
+		#resetBtn:focus { box-shadow: 0 0 0 4px rgba(255,120,80,0.08); }
+
+		/* skins: roxo -> cyan (visual vibrante) */
+		#skinsBtn {
+			background: linear-gradient(90deg, #b07bff, #19f0ff);
+			color: #071021;
+			box-shadow: 0 10px 30px rgba(120,80,200,0.06);
+		}
+		#skinsBtn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 16px 44px rgba(120,80,200,0.12); }
+		#skinsBtn:focus { box-shadow: 0 0 0 4px rgba(120,80,200,0.08); }
+
+		/* pequena melhoria no botão fechar do modal para ficar visível sobre fundo mais escuro */
+		.modal .close-btn {
+			background: rgba(255,255,255,0.03);
+			padding: 6px 8px;
+			border-radius: 8px;
+		}
+		.modal .close-btn:hover { background: rgba(255,255,255,0.06); transform: translateY(-1px); }
+
+		/* entities layer and sprite sizes */
+		#entities{
+			position:fixed;
+			inset:0;
+			z-index:1; /* between decorative shapes (z:0) and main card (z:2) */
+			pointer-events:none;
+			overflow:hidden;
+		}
+		.entity{
+			position:absolute;
+			will-change:transform;
+			pointer-events:none;
+			user-select:none;
+			display:block;
+			transition: transform 120ms linear;
+			transform-origin:center;
+		}
+		.entity.small{ width:28px; height:28px; }
+		.entity.medium{ width:44px; height:44px; }
+		.entity.large{ width:60px; height:60px; }
+
+		/* optional gentle blur/shadow to integrate with background */
+		.entity { filter: drop-shadow(0 6px 12px rgba(0,0,0,0.18)); opacity:0.95; }
 	</style>
 </head>
 <body>
+	<!-- floating background entities (sprites) -->
+	<div id="entities" aria-hidden="true"></div>
+
 	<div class="container">
 		<div class="left">
 			<div class="cookie-num">Cookies : <span id="cookies" class="big-num">0</span></div>
@@ -183,15 +309,17 @@
 				<div class="stat">Meilleur CPS : <span id="bestCPS">0.00</span></div>
 			</div>
 
-			<div class="footer">Astuce : appuyez sur Espace pour cliquer. La partie est sauvegardée automatiquement.</div>
+			<div class="footer">Astuce : appuyez sur Espace pour cliquer. La partie est sauvegardée automatiquement.
+				<a href="../index.html">← Retour au Hub</a>
+			</div>
 		</div>
 
 		<div class="right">
 			<div class="topbar">
 				<strong>Boutique</strong>
 				<div class="controls">
-					<button id="saveBtn" title="Sauvegarder la partie">💾 Sauvegarder</button>
 					<button id="resetBtn" title="Réinitialiser la partie">♻️ Réinitialiser</button>
+					<button id="skinsBtn" title="Skins">🎨 Skins</button>
 				</div>
 			</div>
 
@@ -202,147 +330,705 @@
 		</div>
 	</div>
 
+	<!-- modal de skins (inicialmente oculto) -->
+	<div id="skinsModal" class="modal-overlay hidden" aria-hidden="true">
+		<div class="modal" role="dialog" aria-modal="true" aria-labelledby="skinsTitle">
+			<div class="modal-header">
+				<h3 id="skinsTitle">Skins</h3>
+				<button class="close-btn" id="closeSkinsBtn" aria-label="Fermer">✕</button>
+			</div>
+			<div id="skinsModalContent" class="modal-grid">
+				<!-- conteúdo das skins gerado via JS -->
+			</div>
+		</div>
+	</div>
+
 	<script>
-		// Estado do jogo
-		const defaultState = {
-			cookies: 0,
-			totalCookies: 0,
-			perClick: 1,
-			bestCPS: 0,
-			items: [
-				{ id: 'cursor', name: 'Curseur', baseCost: 15, qty: 0, cps: 0.1 },
-				{ id: 'grandma', name: 'Grand-mère', baseCost: 100, qty: 0, cps: 1 },
-				{ id: 'farm', name: 'Ferme', baseCost: 1100, qty: 0, cps: 8 }
-			],
-			lastTick: Date.now()
+		// Estado do jogo (items agrandidos + skins)
+const defaultState = {
+	cookies: 0,
+	totalCookies: 0,
+	perClick: 1,
+	bestCPS: 0,
+	items: [
+		{ id: 'cursor', name: 'Curseur', baseCost: 15, qty: 0, cps: 0.1, perClickBonus: 1 },
+		{ id: 'grandma', name: 'Grand-mère', baseCost: 100, qty: 0, cps: 1, perClickBonus: 0 },
+		{ id: 'farm', name: 'Ferme', baseCost: 1100, qty: 0, cps: 8, perClickBonus: 0 },
+		{ id: 'mine', name: 'Mine', baseCost: 12000, qty: 0, cps: 47, perClickBonus: 0 },
+		{ id: 'factory', name: 'Usine', baseCost: 130000, qty: 0, cps: 260, perClickBonus: 0 },
+		{ id: 'bank', name: 'Banque', baseCost: 1400000, qty: 0, cps: 1400, perClickBonus: 0 }
+	],
+	skins: [
+		{ id: 'classic', name: 'Classique', cost: 0, owned: true },
+		{ id: 'pastel', name: 'Pastel', cost: 500, owned: false },
+		{ id: 'neon', name: 'Neon', cost: 2500, owned: false },
+		{ id: 'choco', name: 'Chocolat', cost: 12000, owned: false }
+	],
+	selectedSkin: 'classic',
+	lastTick: Date.now()
+};
+
+let state = loadState();
+// evitar gros delta a la primeira tick após load
+state.lastTick = Date.now();
+
+// helpers
+function fmt(n) {
+	if (!isFinite(n)) return '0';
+	if (Math.abs(n) < 1000) return (Math.abs(n) % 1 === 0) ? String(Math.floor(n)) : n.toFixed(2);
+	if (n >= 1e9) return (n/1e9).toFixed(2) + 'B';
+	if (n >= 1e6) return (n/1e6).toFixed(2) + 'M';
+	if (n >= 1e3) return (n/1e3).toFixed(2) + 'K';
+	return Math.floor(n).toString();
+}
+
+function itemCost(item) {
+	// custo escalonado (cada compra aumenta 15%)
+	return Math.ceil(item.baseCost * Math.pow(1.15, item.qty));
+}
+
+/* new helper: custo total para comprar `count` unidades do mesmo item */
+function bulkCost(item, count) {
+	count = Number(count) || 1;
+	if (count <= 0) return 0;
+	let total = 0;
+	for (let i = 0; i < count; i++) {
+		const price = Math.ceil(item.baseCost * Math.pow(1.15, (Number(item.qty) || 0) + i));
+		total += price;
+	}
+	return total;
+}
+
+function totalCPS() {
+	return state.items.reduce((s, it) => {
+		const qty = Number(it.qty) || 0;
+		const cps = Number(it.cps) || 0;
+		return s + qty * cps;
+	}, 0);
+}
+
+// salvar / carregar (inclui skins e selectedSkin)
+function saveState() {
+	localStorage.setItem('mini_cookie_state_v1', JSON.stringify(state));
+}
+function loadState() {
+	try {
+		const raw = localStorage.getItem('mini_cookie_state_v1');
+		if (!raw) return JSON.parse(JSON.stringify(defaultState));
+
+		const parsed = JSON.parse(raw);
+
+		const result = {
+			cookies: Number(parsed.cookies) || 0,
+			totalCookies: Number(parsed.totalCookies) || 0,
+			perClick: Number(parsed.perClick) || defaultState.perClick,
+			bestCPS: Number(parsed.bestCPS) || 0,
+			lastTick: Date.now(),
+			items: [],
+			skins: [],
+			selectedSkin: parsed.selectedSkin || defaultState.selectedSkin
 		};
 
-		let state = loadState();
-
-		// helpers
-		function fmt(n) {
-			// show two decimals for small/fractional numbers, big-number suffixes otherwise
-			if (!isFinite(n)) return '0';
-			if (Math.abs(n) < 1000) {
-				// if integer, show as integer, else 2 decimals
-				return (Math.abs(n) % 1 === 0) ? String(Math.floor(n)) : n.toFixed(2);
-			}
-			if (n >= 1e9) return (n/1e9).toFixed(2) + 'B';
-			if (n >= 1e6) return (n/1e6).toFixed(2) + 'M';
-			if (n >= 1e3) return (n/1e3).toFixed(2) + 'K';
-			return Math.floor(n).toString();
-		}
-
-		function itemCost(item) {
-			return Math.ceil(item.baseCost * Math.pow(1.15, item.qty));
-		}
-
-		function totalCPS() {
-			// soma defensiva — garante number e evita NaN caso algum item faltante
-			return state.items.reduce((s, it) => {
-				const qty = Number(it.qty) || 0;
-				const cps = Number(it.cps) || 0;
-				return s + qty * cps;
-			}, 0);
-		}
-
-		// salvar / carregar
-		function saveState() {
-			localStorage.setItem('mini_cookie_state_v1', JSON.stringify(state));
-		}
-		function loadState() {
-			try {
-				const raw = localStorage.getItem('mini_cookie_state_v1');
-				if (!raw) return JSON.parse(JSON.stringify(defaultState));
-
-				const parsed = JSON.parse(raw);
-
-				// garantir campos básicos
-				const result = {
-					cookies: Number(parsed.cookies) || 0,
-					totalCookies: Number(parsed.totalCookies) || 0,
-					perClick: Number(parsed.perClick) || defaultState.perClick,
-					bestCPS: Number(parsed.bestCPS) || 0,
-					lastTick: parsed.lastTick || Date.now(),
-					items: []
-				};
-
-				// merge item por id com defaultState.items para garantir baseCost, cps, name
-				const savedItemsById = (parsed.items || []).reduce((m, it) => {
-					if (it && it.id) m[it.id] = it;
-					return m;
-				}, {});
-				defaultState.items.forEach(d => {
-					const s = savedItemsById[d.id] || {};
-					result.items.push({
-						id: d.id,
-						name: d.name || d.id,
-						baseCost: Number(s.baseCost ?? d.baseCost) || d.baseCost,
-						qty: Number(s.qty) || 0,
-						cps: Number(s.cps ?? d.cps) || d.cps
-					});
-				});
-
-				return result;
-			} catch (e) {
-				return JSON.parse(JSON.stringify(defaultState));
-			}
-		}
-		function resetState() {
-			if (!confirm('Êtes-vous sûr de vouloir réinitialiser la partie ?')) return;
-			state = JSON.parse(JSON.stringify(defaultState));
-			state.lastTick = Date.now();
-			saveState();
-			renderAll();
-		}
-
-		// animação visual mínima - agora anexa ao botão do cookie para garantir stacking/posição correcta
-		function animatePulse() {
-			const btn = document.getElementById('cookieBtn');
-			if (!btn) return;
-			const p = document.createElement('div');
-			p.className = 'pulse';
-			// colocar relativo ao botão
-			p.style.position = 'absolute';
-			p.style.left = '50%';
-			p.style.top = '50%';
-			p.style.transform = 'translate(-50%,-50%) scale(1)';
-			p.style.pointerEvents = 'none';
-			const size = 24 + Math.random()*30;
-			p.style.width = p.style.height = size + 'px';
-			p.style.background = 'rgba(255,255,255,0.6)';
-			p.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)';
-			p.style.borderRadius = '50%';
-			p.style.transition = 'transform 600ms ease, opacity 600ms ease';
-			p.style.zIndex = '6';
-			btn.appendChild(p);
-			// animar a partir do centro do botão
-			requestAnimationFrame(()=> {
-				p.style.transform = 'translate(-50%,-50%) scale(2.3)';
-				p.style.opacity = '0';
+		const savedItemsById = (parsed.items || []).reduce((m, it) => { if (it && it.id) m[it.id] = it; return m; }, {});
+		defaultState.items.forEach(d => {
+			const s = savedItemsById[d.id] || {};
+			result.items.push({
+				id: d.id,
+				name: d.name || d.id,
+				baseCost: Number(s.baseCost ?? d.baseCost) || d.baseCost,
+				qty: Number(s.qty) || 0,
+				cps: Number(s.cps ?? d.cps) || d.cps
 			});
-			setTimeout(()=> {
-				p.remove();
-			}, 650);
+		});
+
+		const savedSkinsById = (parsed.skins || []).reduce((m, s) => { if (s && s.id) m[s.id] = s; return m; }, {});
+		defaultState.skins.forEach(s => {
+			const ss = savedSkinsById[s.id] || {};
+			result.skins.push({
+				id: s.id,
+				name: s.name,
+				cost: Number(ss.cost ?? s.cost) || s.cost,
+				owned: Boolean(ss.owned || s.owned)
+			});
+		});
+
+		// si selectedSkin was saved but not owned, keep classic
+		if (!result.skins.find(s => s.id === result.selectedSkin && s.owned)) {
+			result.selectedSkin = defaultState.selectedSkin;
 		}
 
-		// eventos UI - textos em francês já ajustados
-		const cookieBtn = document.getElementById('cookieBtn');
-		cookieBtn.addEventListener('click', ()=> clickCookie(state.perClick));
-		cookieBtn.addEventListener('keydown', (e)=> { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); clickCookie(state.perClick); } });
+		return result;
+	} catch (e) {
+		return JSON.parse(JSON.stringify(defaultState));
+	}
+}
+function resetState() {
+	if (!confirm('Êtes-vous sûr de vouloir réinitialiser la partie ?')) return;
+	state = JSON.parse(JSON.stringify(defaultState));
+	state.lastTick = Date.now();
+	saveState();
+	renderAll();
+}
 
-		document.addEventListener('keydown', (e) => { if (e.code === 'Space') { e.preventDefault(); clickCookie(state.perClick); } });
+// animação visual mínima
+function animatePulse() {
+	const btn = document.getElementById('cookieBtn');
+	if (!btn) return;
+	const p = document.createElement('div');
+	p.className = 'pulse';
+	p.style.position = 'absolute';
+	p.style.left = '50%';
+	p.style.top = '50%';
+	p.style.transform = 'translate(-50%,-50%) scale(1)';
+	p.style.pointerEvents = 'none';
+	const size = 24 + Math.random()*30;
+	p.style.width = p.style.height = size + 'px';
+	p.style.background = 'rgba(255,255,255,0.6)';
+	p.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)';
+	p.style.borderRadius = '50%';
+	p.style.transition = 'transform 600ms ease, opacity 600ms ease';
+	p.style.zIndex = '6';
+	btn.appendChild(p);
+	requestAnimationFrame(()=> {
+		p.style.transform = 'translate(-50%,-50%) scale(2.3)';
+		p.style.opacity = '0';
+	});
+	setTimeout(()=> { p.remove(); }, 650);
+}
 
-		document.getElementById('saveBtn').addEventListener('click', saveState);
-		document.getElementById('resetBtn').addEventListener('click', resetState);
+// eventos UI
+const cookieBtn = document.getElementById('cookieBtn');
+cookieBtn.addEventListener('click', ()=> clickCookie(state.perClick));
+cookieBtn.addEventListener('keydown', (e)=> { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); clickCookie(state.perClick); } });
+document.addEventListener('keydown', (e) => { if (e.code === 'Space') { e.preventDefault(); clickCookie(state.perClick); } });
 
-		// timers
-		renderAll();
-		setInterval(tick, 200);
-		setInterval(saveState, 5000);
-		window.addEventListener('beforeunload', saveState);
+document.getElementById('resetBtn').addEventListener('click', resetState);
 
-		renderAll();
+// novo: skins modal controls
+const skinsBtn = document.getElementById('skinsBtn');
+const skinsModal = document.getElementById('skinsModal');
+const skinsModalContent = document.getElementById('skinsModalContent');
+const closeSkinsBtn = document.getElementById('closeSkinsBtn');
+
+skinsBtn.addEventListener('click', () => { renderSkinsModal(); openSkinsModal(); });
+closeSkinsBtn.addEventListener('click', closeSkinsModal);
+// fechar clicando no overlay (fora do modal)
+skinsModal.addEventListener('click', (e) => { if (e.target === skinsModal) closeSkinsModal(); });
+// fechar com Esc
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !skinsModal.classList.contains('hidden')) closeSkinsModal(); });
+
+// timers
+// Ensure entity runtime vars exist early to avoid "Cannot access 'entities' before initialization"
+const entitiesContainer = document.getElementById('entities');
+let entities = []; // runtime array of entity objects
+let lastEntityFrame = performance.now();
+
+setInterval(tick, 200);
+setInterval(saveState, 5000);
+window.addEventListener('beforeunload', saveState);
+
+// core functions
+function clickCookie(amount) {
+	state.cookies += amount;
+	state.totalCookies += amount;
+	animatePulse();
+	renderAll();
+}
+
+function tick() {
+	const now = Date.now();
+	let delta = (now - (state.lastTick || now)) / 1000;
+	// sanity: clamp delta (e.g., on resume from sleep)
+	if (delta > 10) delta = 0.2;
+	state.lastTick = now;
+
+	const cps = totalCPS();
+	const earned = cps * delta;
+	state.cookies += earned;
+	state.totalCookies += earned;
+
+	if (cps > state.bestCPS) state.bestCPS = cps;
+
+	renderAll();
+}
+
+function applySkin() {
+	const btn = document.getElementById('cookieBtn');
+	if (!btn) return;
+	const skin = state.skins.find(s => s.id === state.selectedSkin) || state.skins[0];
+
+	// estilos de fundo do botão
+	let bg, box;
+	switch (skin.id) {
+		case 'pastel':
+			bg = 'radial-gradient(circle at 30% 30%, #fff4f8, #ffe6c8 40%, #f0d1ff 100%)';
+			box = '0 12px 34px rgba(240,180,255,0.12), 0 0 28px rgba(255,200,255,0.06)';
+			break;
+		case 'neon':
+			bg = 'radial-gradient(circle at 30% 30%, #fff9b0, #ffd36a 40%, #ff7ee2 100%)';
+			box = '0 14px 44px rgba(255,110,220,0.14), 0 0 40px rgba(25,240,255,0.12)';
+			break;
+		case 'choco':
+			bg = 'radial-gradient(circle at 30% 30%, #f3d6b8, #d8a064 40%, #8b5a2b 100%)';
+			box = '0 12px 34px rgba(100,60,20,0.12)';
+			break;
+		default:
+			bg = 'radial-gradient(circle at 30% 30%, #ffefc2, #f1c27d 40%, #d68a2a 100%)';
+			box = '0 10px 30px rgba(0,0,0,0.6), 0 0 28px rgba(25,240,255,0.04)';
+	}
+	btn.style.background = bg;
+	btn.style.boxShadow = box;
+
+	// aplicar cores ao SVG interno para que o "biscoito" mude de cor
+	const svg = btn.querySelector('svg');
+	if (svg) {
+		const circles = svg.querySelectorAll('circle');
+		const path = svg.querySelector('path');
+
+		let baseFill = '#ffefc2';
+		let spotFill = '#6b3b1a';
+		let mouthStroke = '#6b3b1a';
+
+		switch (skin.id) {
+			case 'pastel':
+				baseFill = '#fff4e8';
+				spotFill = '#c88aa3';
+				mouthStroke = '#6b3b1a';
+				break;
+			case 'neon':
+				baseFill = '#fffde0';
+				spotFill = '#ff55d1';
+				mouthStroke = '#6b3b1a';
+				break;
+			case 'choco':
+				baseFill = '#e0b992';
+				spotFill = '#6b3b1a';
+				mouthStroke = '#4c2f18';
+				break;
+			default:
+				baseFill = '#ffefc2';
+				spotFill = '#6b3b1a';
+				mouthStroke = '#6b3b1a';
+		}
+
+		if (circles.length > 0) {
+			circles[0].setAttribute('fill', baseFill);
+			for (let i = 1; i < circles.length; i++) {
+				circles[i].setAttribute('fill', spotFill);
+			}
+		}
+		if (path) path.setAttribute('stroke', mouthStroke);
+		svg.style.transition = 'all 220ms ease';
+	}
+}
+
+function renderAll() {
+	// infos
+	document.getElementById('cookies').textContent = fmt(state.cookies);
+	document.getElementById('cps').textContent = fmt(totalCPS());
+	document.getElementById('perClick').textContent = fmt(state.perClick);
+	document.getElementById('totalCookies').textContent = fmt(state.totalCookies);
+	document.getElementById('bestCPS').textContent = fmt(state.bestCPS);
+
+	// items shop (DOM)
+	const itemsContainer = document.getElementById('items');
+	itemsContainer.innerHTML = '';
+
+	state.items.forEach(item => {
+		const cost1 = itemCost(item);
+		const cost10 = bulkCost(item, 10);
+		const affordable1 = Number(state.cookies) >= Number(cost1);
+		const affordable10 = Number(state.cookies) >= Number(cost10);
+
+		const itemEl = document.createElement('div');
+		itemEl.className = 'item';
+
+		const left = document.createElement('div');
+		left.className = 'left';
+		left.innerHTML = `<strong>${item.name}</strong>
+			<div class="small">+${fmt(item.cps)} CPS</div>
+			<div class="small">Possédés: ${item.qty}</div>`;
+
+		const meta = document.createElement('div');
+		meta.className = 'meta';
+
+		const badge = document.createElement('span');
+		badge.className = 'price-badge';
+		badge.textContent = fmt(cost1);
+
+		// buy buttons: x1 and x10
+		const btnRow = document.createElement('div');
+		btnRow.style.display = 'flex';
+		btnRow.style.gap = '8px';
+
+		const btn1 = document.createElement('button');
+		btn1.className = 'buy';
+		btn1.textContent = 'Acheter ×1';
+		btn1.disabled = !affordable1;
+		btn1.addEventListener('click', () => { buyItem(item.id, 1); });
+
+		const btn10 = document.createElement('button');
+		btn10.className = 'buy';
+		btn10.textContent = `Acheter ×10 (${fmt(cost10)})`;
+		btn10.style.fontSize = '0.85rem';
+		btn10.disabled = !affordable10;
+		btn10.addEventListener('click', () => { buyItem(item.id, 10); });
+
+		btnRow.appendChild(btn1);
+		btnRow.appendChild(btn10);
+
+		meta.appendChild(badge);
+		meta.appendChild(btnRow);
+
+		itemEl.appendChild(left);
+		itemEl.appendChild(meta);
+		itemsContainer.appendChild(itemEl);
+	});
+
+	// aplicar skin visualmente
+	applySkin();
+	// sincronizar e iniciar animação das entidades visuais (curseurs, grandmas, etc.)
+	renderEntities();
+
+	// also call renderEntities after load to initialize visuals once
+	// ensure to call once on startup (renderAll already called at the end of the script)
+	// renderEntities();
+}
+
+// modal functions: render / open / close
+function renderSkinsModal() {
+	// rebuild modal content every time so buttons reflect current state
+	skinsModalContent.innerHTML = '';
+	state.skins.forEach(s => {
+		const skinEl = document.createElement('div');
+		skinEl.className = 'skin';
+
+		const name = document.createElement('div');
+		name.className = 'name';
+		name.textContent = s.name;
+
+		const costEl = document.createElement('div');
+		costEl.className = 'cost';
+		costEl.textContent = s.owned ? 'Débloqué' : fmt(s.cost) + ' cookies';
+
+		// preview
+		const preview = document.createElement('div');
+		preview.className = 'skin-preview';
+		applySkinToElement(s.id, preview);
+
+		const actionWrap = document.createElement('div');
+		const btn = document.createElement('button');
+		btn.type = 'button'; // importante
+		btn.className = 'skin-btn';
+
+		const affordable = Number(state.cookies) >= Number(s.cost);
+		const selected = state.selectedSkin === s.id;
+
+		if (s.owned) {
+			btn.textContent = selected ? 'Équipé' : 'Équiper';
+			btn.disabled = selected;
+			btn.addEventListener('click', (ev) => {
+				ev.stopPropagation();
+				equipSkin(s.id);
+				// atualiza modal e página
+				renderSkinsModal();
+			});
+		} else {
+			btn.textContent = `Acheter (${fmt(s.cost)})`;
+			btn.disabled = !affordable;
+			btn.addEventListener('click', (ev) => {
+				ev.stopPropagation();
+				const ok = buySkin(s.id);
+				if (ok) renderSkinsModal();
+			});
+		}
+
+		actionWrap.appendChild(btn);
+		skinEl.appendChild(name);
+		skinEl.appendChild(preview);
+		skinEl.appendChild(costEl);
+		skinEl.appendChild(actionWrap);
+		skinsModalContent.appendChild(skinEl);
+	});
+}
+
+function openSkinsModal() {
+	skinsModal.classList.remove('hidden');
+	skinsModal.setAttribute('aria-hidden', 'false');
+	document.body.style.overflow = 'hidden';
+}
+function closeSkinsModal() {
+	skinsModal.classList.add('hidden');
+	skinsModal.setAttribute('aria-hidden', 'true');
+	document.body.style.overflow = '';
+	// ao fechar, garantir que a loja e botão principal atualizem
+	renderAll();
+	saveState();
+}
+
+function buyItem(itemId, count = 1) {
+	const item = state.items.find(i => i.id === itemId);
+	if (!item) return false;
+	count = Number(count) || 1;
+	if (count <= 0) return false;
+
+	const total = bulkCost(item, count);
+	if (!isFinite(total) || total <= 0) return false;
+	if (state.cookies < total) return false;
+
+	// pagar e aplicar compras
+	state.cookies -= total;
+	item.qty = Number(item.qty || 0) + count;
+
+	// aplicar bônus por clique se existir
+	const perClickBonus = Number(item.perClickBonus || 0);
+	if (perClickBonus) {
+		state.perClick = Number(state.perClick || 0) + perClickBonus * count;
+	}
+
+	// salvar e atualizar UI
+	saveState();
+	renderAll();
+	// se o modal de skins estiver aberto, re-render para atualizar botões
+	if (typeof skinsModal !== 'undefined' && !skinsModal.classList.contains('hidden')) renderSkinsModal();
+	return true;
+}
+
+function applySkinToElement(skinId, el) {
+	// aplica estilos simples ao elemento passado (preview) com base no skinId
+	if (!el) return;
+	switch (skinId) {
+		case 'pastel':
+			el.style.background = 'radial-gradient(circle at 30% 30%, #ffe4f0, #ffd1a8 40%, #f0b6ff 100%)';
+			el.style.boxShadow = '0 6px 16px rgba(240,180,255,0.12)';
+			break;
+		case 'neon':
+			el.style.background = 'radial-gradient(circle at 30% 30%, #fff9b0, #ffd36a 40%, #ff7ee2 100%)';
+			el.style.boxShadow = '0 6px 16px rgba(255,110,220,0.12)';
+			break;
+		case 'choco':
+			el.style.background = 'radial-gradient(circle at 30% 30%, #f3d6b8, #d8a064 40%, #8b5a2b 100%)';
+			el.style.boxShadow = '0 6px 16px rgba(100,60,20,0.12)';
+			break;
+		default:
+			el.style.background = 'radial-gradient(circle at 30% 30%, #ffefc2, #f1c27d 40%, #d68a2a 100%)';
+			el.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)';
+	}
+	// manter formato circular pequeno para preview
+	el.style.width = '56px';
+	el.style.height = '56px';
+	el.style.borderRadius = '50%';
+	el.style.margin = '6px auto';
+}
+
+/* renderSkinsModal: cria preview e buttons com type="button" e stopPropagation para evitar problemas */
+function renderSkinsModal() {
+	// rebuild modal content every time so buttons reflect current state
+	skinsModalContent.innerHTML = '';
+	state.skins.forEach(s => {
+		const skinEl = document.createElement('div');
+		skinEl.className = 'skin';
+
+		const name = document.createElement('div');
+		name.className = 'name';
+		name.textContent = s.name;
+
+		const costEl = document.createElement('div');
+		costEl.className = 'cost';
+		costEl.textContent = s.owned ? 'Débloqué' : fmt(s.cost) + ' cookies';
+
+		// preview
+		const preview = document.createElement('div');
+		preview.className = 'skin-preview';
+		applySkinToElement(s.id, preview);
+
+		const actionWrap = document.createElement('div');
+		const btn = document.createElement('button');
+		btn.type = 'button'; // importante
+		btn.className = 'skin-btn';
+
+		const affordable = Number(state.cookies) >= Number(s.cost);
+		const selected = state.selectedSkin === s.id;
+
+		if (s.owned) {
+			btn.textContent = selected ? 'Équipé' : 'Équiper';
+			btn.disabled = selected;
+			btn.addEventListener('click', (ev) => {
+				ev.stopPropagation();
+				equipSkin(s.id);
+				// atualiza modal e página
+				renderSkinsModal();
+			});
+		} else {
+			btn.textContent = `Acheter (${fmt(s.cost)})`;
+			btn.disabled = !affordable;
+			btn.addEventListener('click', (ev) => {
+				ev.stopPropagation();
+				const ok = buySkin(s.id);
+				if (ok) renderSkinsModal();
+			});
+		}
+
+		actionWrap.appendChild(btn);
+		skinEl.appendChild(name);
+		skinEl.appendChild(preview);
+		skinEl.appendChild(costEl);
+		skinEl.appendChild(actionWrap);
+		skinsModalContent.appendChild(skinEl);
+	});
+}
+
+/* buySkin/equipSkin: garantias numéricas, salvar, aplicar skin no botão principal e re-render */
+function buySkin(skinId) {
+	const skin = state.skins.find(s => s.id === skinId);
+	if (!skin) return false;
+	if (skin.owned) return false;
+	const costNum = Number(skin.cost) || 0;
+	if (!isFinite(costNum) || state.cookies < costNum) return false;
+
+	state.cookies -= costNum;
+	skin.owned = true;
+	state.selectedSkin = skin.id;
+
+	saveState();
+	applySkin();   // aplicar imediatamente ao botão principal
+	renderAll();   // atualizar valores
+	return true;
+}
+
+function equipSkin(skinId) {
+	const skin = state.skins.find(s => s.id === skinId);
+	if (!skin || !skin.owned) return false;
+	state.selectedSkin = skin.id;
+	saveState();
+	applySkin();   // garantir que o botão principal mude instantaneamente
+	renderAll();
+	return true;
+}
+
+// exposer algumas funções ao escopo global para os atributos onclick do HTML
+window.buyItem = buyItem;
+window.buySkin = buySkin;
+window.equipSkin = equipSkin;
+
+	// render inicial
+	// NOTE: moved the initial render call further down so ENTITY_MAP and entity helpers exist
+	// (renderAll will be invoked at the end of the script)
+
+	// new: mapping item -> image, size class, base speed (px/sec)
+	const ENTITY_MAP = {
+		'cursor':  { src: '../images/cursor.png', size: 'small',  speed: 40 },
+		'grandma': { src: '../images/grandma.png', size: 'medium', speed: 28 },
+		'farm':    { src: '../images/ferme.png',   size: 'medium', speed: 22 },
+		'mine':    { src: '../images/mine.png',    size: 'medium', speed: 36 },
+		'factory': { src: '../images/usine.png',   size: 'large',  speed: 18 },
+		'bank':    { src: '../images/banque.png',  size: 'large',  speed: 14 }
+	};
+
+	// runtime state for entities
+	// const entitiesContainer = document.getElementById('entities');
+	// let entities = []; // array of {el, type, x,y,vx,vy}
+	// let lastEntityFrame = performance.now();
+
+	// create one entity DOM + state
+	function createEntity(type){
+		const info = ENTITY_MAP[type];
+		if (!info) return null;
+		const img = document.createElement('img');
+		img.className = `entity ${info.size}`;
+		img.src = info.src;
+		img.alt = '';
+		img.draggable = false;
+		// random position within viewport
+		const w = window.innerWidth, h = window.innerHeight;
+		const x = Math.random() * (w - 10);
+		const y = Math.random() * (h - 10);
+		// random direction velocity scaled by info.speed
+		const angle = Math.random() * Math.PI * 2;
+		const speed = info.speed * (0.7 + Math.random() * 0.6); // variation
+		const vx = Math.cos(angle) * speed;
+		const vy = Math.sin(angle) * speed;
+
+		const item = { el: img, type, x, y, vx, vy };
+		img.style.transform = `translate(${x}px, ${y}px)`;
+		entities.push(item);
+		entitiesContainer.appendChild(img);
+		return item;
+	}
+
+	// remove last entity of specific type
+	function removeEntityOfType(type){
+		for (let i = entities.length - 1; i >= 0; i--){
+			if (entities[i].type === type){
+				const e = entities.splice(i,1)[0];
+				if (e && e.el && e.el.parentNode) e.el.parentNode.removeChild(e.el);
+				return true;
+			}
+		}
+		return false;
+	}
+
+	// ensure entities match state quantities (synchronize)
+	function syncEntitiesToState(){
+		// count desired per type
+		const desired = {};
+		state.items.forEach(it => {
+			desired[it.id] = Number(it.qty) || 0;
+		});
+		// current counts
+		const current = {};
+		entities.forEach(e => current[e.type] = (current[e.type] || 0) + 1);
+
+		// add missing
+		Object.keys(desired).forEach(type => {
+			const want = desired[type] || 0;
+			const have = current[type] || 0;
+			const toAdd = Math.max(0, Math.min(300 - entities.length, want - have)); // cap total to avoid perf explosion
+			for (let i=0;i<toAdd;i++) createEntity(type);
+		});
+		// remove excess
+		Object.keys(current).forEach(type => {
+			const want = desired[type] || 0;
+			let have = current[type] || 0;
+			while (have > want){
+				if (!removeEntityOfType(type)) break;
+				have--;
+			}
+		});
+	}
+
+	// animation loop for entities (wrap-around)
+	function animateEntities(now){
+		const dt = Math.min(0.06, (now - lastEntityFrame) / 1000); // seconds, clamp
+		lastEntityFrame = now;
+		const w = window.innerWidth, h = window.innerHeight;
+		for (let i = 0; i < entities.length; i++){
+			const e = entities[i];
+			e.x += e.vx * dt;
+			e.y += e.vy * dt;
+			// wrap-around edges for smoothness
+			if (e.x < -80) e.x = w + 20;
+			if (e.x > w + 80) e.x = -20;
+			if (e.y < -80) e.y = h + 20;
+			if (e.y > h + 80) e.y = -20;
+			e.el.style.transform = `translate(${e.x}px, ${e.y}px)`;
+		}
+		requestAnimationFrame(animateEntities);
+	}
+
+	// public: call to refresh entities (keeps sync + starts animation once)
+	function renderEntities(){
+		syncEntitiesToState();
+		// start loop if not running
+		if (!animateEntities._started){
+			animateEntities._started = true;
+			lastEntityFrame = performance.now();
+			requestAnimationFrame(animateEntities);
+		}
+	}
+
+	// initial render: safe to call now that ENTITY_MAP and entity helpers are defined
+	renderAll();
 	</script>
 </body>
 </html>
