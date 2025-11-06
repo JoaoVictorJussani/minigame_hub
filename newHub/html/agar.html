@@ -168,10 +168,15 @@
       // shard mass taken
       const shardMass = Math.floor(mainPlayer.mass/2);
       mainPlayer.mass -= shardMass;
-      // direction towards mouse
+      // direction towards mouse (fall back to random if mouse is essentially on top of player)
       let dx = mouse.x - mainPlayer.x, dy = mouse.y - mainPlayer.y;
-      const dlen = Math.hypot(dx,dy) || 1;
-      dx /= dlen; dy /= dlen;
+      const dlen = Math.hypot(dx,dy);
+      if(dlen < 6){
+        const ang = rand(0, Math.PI*2);
+        dx = Math.cos(ang); dy = Math.sin(ang);
+      } else {
+        dx /= dlen; dy /= dlen;
+      }
       // initial shard speed should scale with its size: larger shards move slower
       // reuse botSpeedFactor so shard speed is consistent with bot movement scaling
       const baseSplitSpeed = 6; // tuned baseline
@@ -217,15 +222,16 @@
         if(s.age >= s.life) s.canMerge = true;
 
         if(!s.canMerge){
-          // While shard is active after split, use the same movement model as the main player
-          // so it follows the mouse at a similar, mass-scaled speed.
-          const sMaxSpeed = Math.max(0.6, 4.6 - Math.log(s.mass+1)*0.6);
-          const ax = (mouse.x - s.x) * 0.06;
-          const ay = (mouse.y - s.y) * 0.06;
-          s.vx += ax * 0.6; s.vy += ay * 0.6;
-          s.vx *= 0.92; s.vy *= 0.92;
-          let spd = Math.hypot(s.vx, s.vy);
-          if(spd > sMaxSpeed){ s.vx = (s.vx / spd) * sMaxSpeed; s.vy = (s.vy / spd) * sMaxSpeed; }
+          // initial split flight: keep the launch inertia and apply only a gentle steer toward the mouse.
+          // Do NOT hard-cap the speed here (the original cap reduced the launch to near-zero).
+          const ax = mouse.x - s.x, ay = mouse.y - s.y;
+          const d = Math.hypot(ax, ay);
+          if(d > 1){
+            s.vx += (ax / d) * 0.18; // gentle steering
+            s.vy += (ay / d) * 0.18;
+          }
+          // light damping so shard slows gradually
+          s.vx *= 0.985; s.vy *= 0.985;
           s.x += s.vx; s.y += s.vy;
         } else {
           // When shard can merge, actively move back toward the main player to rejoin
