@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="fr-FR">
+
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width,initial-scale=1" />
+	<title>Cookie Clicker - Mini</title>
+	<style>
+		:root {
+			--bg-1: #071021;
+			--bg-2: #0f1a2b;
+			--neon-pink: #ff4fcc;
+			--neon-cyan: #19f0ff;
+			--neon-green: #7cff7c;
+			--muted: rgba(255, 255, 255, 0.85);
+			--glass: rgba(255, 255, 255, 0.04);
+			--card-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+		}
+
+		.footer {
+			color: rgba(255, 255, 255, 0.45);
+			font-size: 0.95rem;
+			margin-top: 24px;
+			text-align: center;
+		}
+
+		.footer a {
+			display: inline-block;
+			padding: 8px 18px;
+			border-radius: 8px;
+			background: linear-gradient(90deg, var(--neon-cyan), var(--neon-pink));
+			color: #fff !important;
+			text-decoration: none;
+			font-weight: bold;
+			box-shadow: 0 0 12px var(--neon-cyan), 0 0 12px var(--neon-pink);
+			transition: background 0.2s, box-shadow 0.2s;
+		}
+
+		.footer a:hover {
+			background: linear-gradient(90deg, var(--neon-pink), var(--neon-cyan));
+			box-shadow: 0 0 24px var(--neon-pink), 0 0 24px var(--neon-cyan);
+		}
+
+		* {
+			box-sizing: border-box
+		}
+
+		body {
+			font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+			margin: 0;
+			min-height: 100vh;
+			background:
+				radial-gradient(1200px 600px at 10% 10%, rgba(25, 10, 50, 0.22), transparent),
+				linear-gradient(180deg, var(--bg-1), var(--bg-2));
+			color: var(--muted);
+			-webkit-font-smoothing: antialiased;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 32px;
+			overflow-x: hidden;
+		}
+
+		/* optional decorative blurred shapes to mirror index (kept purely in CSS so no extra HTML needed) */
+		body::before,
+		body::after {
+			content: "";
+			position: fixed;
+			pointer-events: none;
+			filter: blur(60px);
+			opacity: 0.5;
+			z-index: 0;
+		}
+
+		body::before {
+			width: 520px;
+			height: 520px;
+			left: 2%;
+			top: -8%;
+			background: linear-gradient(45deg, var(--neon-pink), var(--neon-cyan));
+			transform: translateZ(0);
+		}
+
+		body::after {
+			width: 420px;
+			height: 420px;
+			right: -6%;
+			bottom: -10%;
+			background: linear-gradient(45deg, var(--neon-green), var(--neon-cyan));
+			transform: translateZ(0);
+		}
+
+		/* container/card like in index */
+		.container {
+			width: 920px;
+			max-width: 95%;
+			display: flex;
+			gap: 20px;
+			align-items: flex-start;
+			position: relative;
+			z-index: 2;
+		}
+
+		.left,
+		.right {
+			border-radius: 12px;
+			box-shadow: 0 18px 40px rgba(2, 6, 23, 0.6);
+			background: var(--card-bg);
+			border: 1px solid rgba(255, 255, 255, 0.03);
+		}
+
+		.left {
+			flex: 1;
+			text-align: center;
+			padding: 20px;
+			min-width: 360px;
+			/* rendre le panneau de gauche collant pour rester visible lors du scroll */
+			position: sticky;
+			top: 32px;
+			align-self: flex-start;
+			z-index: 3;
+		}
+
+		.right {
+			/* largura aumentada para acomodar elementos maiores */
+			width: 720px;
+			padding: 22px;
+			display: flex;
+			flex-direction: column;
+			gap: 14px;
+			/* limite de hauteur lié à la fenêtre : la colonne droite reste fixe,
+			   seul le contenu de la boutique (items) défilera */
+			max-height: calc(100vh - 64px);
+			overflow: hidden;
+		}
+
+		.cookie-num {
+			font-size: 20px;
+			font-weight: 700;
+			margin-bottom: 8px;
+			color: #fff
+		}
+
+		.big-num {
+			font-size: 28px;
+			font-weight: 800;
+			color: var(--neon-cyan)
+		}
+
+		/* cookie button kept circular but with glassy/neon accent */
+		.cookie-btn {
+			width: 260px;
+			height: 260px;
+			margin: 16px auto;
+			border-radius: 16px;
+			border-radius: 50%;
+			background: radial-gradient(circle at 30% 30%, #ffefc2, #f1c27d 40%, #d68a2a 100%);
+			box-shadow:
+				0 10px 30px rgba(0, 0, 0, 0.6),
+				0 0 28px rgba(25, 240, 255, 0.04);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			cursor: pointer;
+			user-select: none;
+			transition: transform 0.08s ease, box-shadow .18s;
+			position: relative;
+		}
+
+		.cookie-btn:active {
+			transform: scale(0.96);
+			box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+		}
+
+		.info {
+			display: flex;
+			justify-content: space-between;
+			margin-top: 8px;
+			color: rgba(255, 255, 255, 0.7);
+			font-size: 14px
+		}
+
+		.items {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+			gap: 12px;
+			margin-top: 8px;
+			overflow: auto;
+			max-height: calc(100vh - 64px - 140px);
+			padding: 8px;
+		}
+
+		/* nouveau style item : carte compacte */
+		.item {
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+			padding: 12px;
+			border-radius: 12px;
+			background: linear-gradient(180deg, rgba(255, 255, 255, 0.015), rgba(255, 255, 255, 0.003));
+			border: 1px solid rgba(255, 255, 255, 0.03);
+			min-height: 110px;
+			justify-content: space-between;
+			transition: transform .14s ease, box-shadow .14s ease;
+		}
+
+		.item:hover {
+			transform: translateY(-6px);
+			box-shadow: 0 12px 34px rgba(2, 6, 23, 0.45);
+		}
+
+		.item .top {
+			display: flex;
+			align-items: flex-start;
+			justify-content: space-between;
+			gap: 8px;
+		}
+
+		.item .meta-left {
+			text-align: left;
+		}
+
+		.item .name {
+			font-weight: 800;
+			color: #fff;
+			margin-bottom: 6px;
+		}
+
+		.item .effect {
+			font-size: 13px;
+			color: rgba(255, 255, 255, 0.78)
+		}
+
+		.item .qty-badge {
+			font-size: 12px;
+			padding: 4px 6px;
+			border-radius: 8px;
+			background: rgba(0, 0, 0, 0.06);
+			color: var(--muted);
+			font-weight: 700;
+		}
+
+		.item .bottom {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 8px;
+			margin-top: 6px;
+		}
+
+		.item .actions {
+			display: flex;
+			gap: 8px;
+		}
+
+		.item .price-badge {
+			font-weight: 800;
+			font-size: 0.95rem;
+			padding: 6px 8px;
+			border-radius: 8px;
+			background: rgba(0, 0, 0, 0.03);
+			color: var(--muted);
+			border: 1px solid rgba(255, 255, 255, 0.02);
+		}
+
+		/* highlight affordable items */
+		.item.affordable {
+			box-shadow: 0 10px 30px rgba(25, 240, 255, 0.04);
+			border-color: rgba(25, 240, 255, 0.06);
+		}
+
+		@media (max-width:520px) {
+			.items {
+				grid-template-columns: 1fr;
+			}
+		}
+
+		/* dark theme toggle (same override as index.html) */
+		body.dark {
+			--bg-1: #f6f8ff;
+			--bg-2: #ffffff;
+			--muted: rgba(5, 10, 20, 0.9);
+			--glass: rgba(2, 6, 23, 0.03);
+		}
+
+		/* new: skins UI */
+		.skins {
+			display: flex;
+			gap: 10px;
+			flex-wrap: wrap;
+			margin-top: 8px;
+		}
+
+		.skin {
+			min-width: 120px;
+			padding: 10px;
+			border-radius: 10px;
+			background: linear-gradient(180deg, rgba(255, 255, 255, 0.01), rgba(255, 255, 255, 0.002));
+			border: 1px solid rgba(255, 255, 255, 0.02);
+			text-align: center;
+			font-size: 0.9rem;
+		}
+
+		.skin .name {
+			font-weight: 800;
+			margin-bottom: 6px;
+		}
+
+		.skin .cost {
+			font-size: 0.85rem;
+			color: rgba(255, 255, 255, 0.75);
+			margin-bottom: 8px;
+		}
+
+		.skin button {
+			padding: 6px 8px;
+			border-radius: 8px;
+			cursor: pointer;
+			border: 0;
+			background: #19f0ff;
+			color: #071021;
+			font-weight: 700;
+		}
+
+		.skin button:disabled {
+			opacity: 0.8;
+			cursor: default
+		}
+
+		/* modal for skins */
+		.modal-overlay {
+			position: fixed;
+			inset: 0;
+			background: rgba(2, 6, 23, 0.6);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			z-index: 40;
+		}
+
+		.modal {
+			width: 760px;
+			max-width: 95%;
+			background: var(--card-bg);
+			border-radius: 12px;
+			padding: 16px;
+			box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+			border: 1px solid rgba(255, 255, 255, 0.03);
+		}
+
+		.modal-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			gap: 12px;
+			margin-bottom: 12px;
+		}
+
+		.modal-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+			gap: 10px;
+		}
+
+		.modal .close-btn {
+			background: transparent;
+			border: 0;
+			font-weight: 800;
+			cursor: pointer;
+		}
+
+		.hidden {
+			display: none !important;
+		}
+
+		/* melhorar overlay do modal (menos transparente) e estilos dos botões de controle */
+		.modal-overlay {
+			/* menos transparente para focar o modal */
+			background: rgba(2, 6, 23, 0.88);
+		}
+
+		/* override/estilo específico para os botões de topo (salvar, reset, skins) */
+		#saveBtn,
+		#resetBtn,
+		#skinsBtn {
+			padding: 10px 14px;
+			border-radius: 12px;
+			font-weight: 800;
+			display: inline-flex;
+			gap: 8px;
+			align-items: center;
+			font-size: 0.95rem;
+			border: 0;
+			cursor: pointer;
+			transition: transform .12s ease, box-shadow .12s ease, opacity .12s, filter .12s;
+			outline: none;
+		}
+
+		/* salvar: cyan/verde suave */
+		#saveBtn {
+			background: linear-gradient(90deg, #6ef0c0, #19f0ff);
+			color: #05292a;
+			box-shadow: 0 10px 30px rgba(25, 240, 255, 0.07);
+		}
+
+		#saveBtn:hover:not(:disabled) {
+			transform: translateY(-2px);
+			box-shadow: 0 16px 44px rgba(25, 240, 255, 0.12);
+		}
+
+		#saveBtn:focus {
+			box-shadow: 0 0 0 4px rgba(25, 240, 255, 0.12);
+		}
+
+		/* reset: quente/alaranjado - atenção visual distinta */
+		#resetBtn {
+			background: linear-gradient(90deg, #ffd36a, #ff7e6a);
+			color: #3a0d00;
+			box-shadow: 0 10px 30px rgba(255, 120, 80, 0.06);
+		}
+
+		#resetBtn:hover:not(:disabled) {
+			transform: translateY(-2px);
+			box-shadow: 0 16px 44px rgba(255, 110, 80, 0.12);
+		}
+
+		#resetBtn:focus {
+			box-shadow: 0 0 0 4px rgba(255, 120, 80, 0.08);
+		}
+
+		/* skins: roxo -> cyan (visual vibrante) */
+		#skinsBtn {
+			background: linear-gradient(90deg, #b07bff, #19f0ff);
+			color: #071021;
+			box-shadow: 0 10px 30px rgba(120, 80, 200, 0.06);
+		}
+
+		#skinsBtn:hover:not(:disabled) {
+			transform: translateY(-2px);
+			box-shadow: 0 16px 44px rgba(120, 80, 200, 0.12);
+		}
+
+		#skinsBtn:focus {
+			box-shadow: 0 0 0 4px rgba(120, 80, 200, 0.08);
+		}
+
+		/* pequena melhoria no botão fechar do modal para ficar visível sobre fundo mais escuro */
+		.modal .close-btn {
+			background: rgba(255, 255, 255, 0.03);
+			padding: 6px 8px;
+			border-radius: 8px;
+		}
+
+		.modal .close-btn:hover {
+			background: rgba(255, 255, 255, 0.06);
+			transform: translateY(-1px);
+		}
+
+		/* entities layer and sprite sizes */
+		#entities {
+			position: fixed;
+			inset: 0;
+			z-index: 1;
+			/* between decorative shapes (z:0) and main card (z:2) */
+			pointer-events: none;
+			overflow: hidden;
+		}
+
+		.entity {
+			position: absolute;
+			will-change: transform;
+			pointer-events: none;
+			user-select: none;
+			display: block;
+			transition: transform 120ms linear;
+			transform-origin: center;
+		}
+
+		.entity.small {
+			width: 28px;
+			height: 28px;
+		}
+
+		.entity.medium {
+			width: 44px;
+			height: 44px;
+		}
+
+		.entity.large {
+			width: 60px;
+			height: 60px;
+		}
+
+		/* optional gentle blur/shadow to integrate with background */
+		.entity {
+			filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.18));
+			opacity: 0.95;
+		}
+
+		/* Golden Cookie */
+		.golden-cookie {
+			position: absolute;
+			width: 96px;
+			height: 96px;
+			background: radial-gradient(circle at 30% 30%, #ffd700, #b8860b);
+			border-radius: 50%;
+			box-shadow: 0 0 30px #ffd700, 0 0 10px #fff;
+			cursor: pointer;
+			z-index: 100;
+			animation: float 2s infinite ease-in-out, rotate 10s linear infinite;
+			transition: opacity 0.5s, transform 0.2s;
+		}
+
+		.golden-cookie:hover {
+			transform: scale(1.1);
+		}
+
+		.golden-cookie:active {
+			transform: scale(0.95);
+		}
+
+		@keyframes float {
+
+			0%,
+			100% {
+				transform: translateY(0);
+			}
+
+			50% {
+				transform: translateY(-10px);
+			}
+		}
+
+		@keyframes rotate {
+			from {
+				transform: rotate(0deg);
+			}
+
+			to {
+				transform: rotate(360deg);
+			}
+		}
+
+		/* Click Text Particles */
+		.click-text {
+			position: fixed;
+			color: #fff;
+			font-weight: bold;
+			font-size: 1.2rem;
+			pointer-events: none;
+			z-index: 50;
+			animation: floatUp 1s forwards;
+			text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+		}
+
+		@keyframes floatUp {
+			0% {
+				opacity: 1;
+				transform: translateY(0) scale(1);
+			}
+
+			100% {
+				opacity: 0;
+				transform: translateY(-50px) scale(1.2);
+			}
+		}
+
+		/* Notifications */
+		.notification-area {
+			position: fixed;
+			bottom: 20px;
+			left: 50%;
+			transform: translateX(-50%);
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
+			z-index: 200;
+			pointer-events: none;
+		}
+
+		.notification {
+			background: rgba(0, 0, 0, 0.8);
+			backdrop-filter: blur(10px);
+			padding: 12px 24px;
+			border-radius: 8px;
+			border: 1px solid rgba(255, 255, 255, 0.1);
+			color: #fff;
+			display: flex;
+			align-items: center;
+			gap: 12px;
+			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+			animation: slideIn 0.3s ease-out forwards, fadeOut 0.5s 3s forwards;
+		}
+
+		.notification img {
+			width: 32px;
+			height: 32px;
+		}
+
+		.notification .title {
+			font-weight: bold;
+			color: var(--neon-cyan);
+		}
+
+		@keyframes slideIn {
+			from {
+				transform: translateY(20px);
+				opacity: 0;
+			}
+
+			to {
+				transform: translateY(0);
+				opacity: 1;
+			}
+		}
+
+		@keyframes fadeOut {
+			to {
+				opacity: 0;
+				transform: translateY(-10px);
+			}
+		}
+	</style>
+</head>
+
+<body>
+	<!-- floating background entities (sprites) -->
+	<div id="entities" aria-hidden="true"></div>
+
+	<div class="container">
+		<div class="left">
+			<div class="cookie-num">Cookies : <span id="cookies" class="big-num">0</span></div>
+			<div id="cookieBtn" class="cookie-btn" title="Cliquez pour gagner des cookies" tabindex="0" role="button"
+				aria-pressed="false">
+				<!-- cookie face minimal -->
+				<svg width="140" height="140" viewBox="0 0 64 64" aria-hidden>
+					<circle cx="32" cy="32" r="30" fill="rgba(0,0,0,0.06)"></circle>
+					<circle cx="22" cy="24" r="3.2" fill="#6b3b1a"></circle>
+					<circle cx="36" cy="28" r="3.6" fill="#6b3b1a"></circle>
+					<path d="M22 38c3 3 10 3 14 0" stroke="#6b3b1a" stroke-width="1.5" fill="none"
+						stroke-linecap="round"></path>
+				</svg>
+			</div>
+
+			<div class="info">
+				<div>CPS : <span id="cps">0.00</span></div>
+				<div>Par clic : <span id="perClick">1</span></div>
+			</div>
+
+			<div class="stats-row" aria-hidden="true">
+				<div class="stat">Total gagné : <span id="totalCookies">0</span></div>
+				<div class="stat">Meilleur CPS : <span id="bestCPS">0.00</span></div>
+			</div>
+
+			<div class="footer">Astuce : appuyez sur Espace pour cliquer. La partie est sauvegardée automatiquement.
+				<a href="../index.html">← Retour au Hub</a>
+			</div>
+		</div>
+
+		<div class="right">
+			<div class="topbar">
+				<strong>Boutique</strong>
+				<div class="controls">
+					<button id="resetBtn" title="Réinitialiser la partie">♻️ Réinitialiser</button>
+					<button id="skinsBtn" title="Skins">🎨 Skins</button>
+				</div>
+			</div>
+
+			<div class="items" id="items">
+				<!-- items gerados por JS -->
+			</div>
+
+		</div>
+	</div>
+
+	<div class="notification-area" id="notificationArea"></div>
+
+	<!-- modal de skins (inicialmente oculto) -->
+	<div id="skinsModal" class="modal-overlay hidden" aria-hidden="true">
+		<div class="modal" role="dialog" aria-modal="true" aria-labelledby="skinsTitle">
+			<div class="modal-header">
+				<h3 id="skinsTitle">Skins</h3>
+				<button class="close-btn" id="closeSkinsBtn" aria-label="Fermer">✕</button>
+			</div>
+			<div id="skinsModalContent" class="modal-grid">
+				<!-- conteúdo das skins gerado via JS -->
+			</div>
+		</div>
+	</div>
+
+	<script>
+		// Estado do jogo (items agrandidos + skins)
+		const defaultState = {
+			cookies: 0,
+			totalCookies: 0,
+			perClick: 1,
+			bestCPS: 0,
+			items: [
+				{ id: 'cursor', name: 'Curseur', baseCost: 15, qty: 0, cps: 0.1, perClickBonus: 1 },
+				{ id: 'grandma', name: 'Grand-mère', baseCost: 100, qty: 0, cps: 1, perClickBonus: 0 },
+				{ id: 'farm', name: 'Ferme', baseCost: 1100, qty: 0, cps: 8, perClickBonus: 0 },
+				{ id: 'mine', name: 'Mine', baseCost: 12000, qty: 0, cps: 47, perClickBonus: 0 },
+				{ id: 'factory', name: 'Usine', baseCost: 130000, qty: 0, cps: 260, perClickBonus: 0 },
+				{ id: 'bank', name: 'Banque', baseCost: 1400000, qty: 0, cps: 1400, perClickBonus: 0 },
+
+				// nouveaux items CPS (génèrent automatiquement des cookies par seconde)
+				{ id: 'assistant', name: 'Assistant', baseCost: 5000, qty: 0, cps: 15, perClickBonus: 0 },
+				{ id: 'manager', name: 'Manager', baseCost: 30000, qty: 0, cps: 90, perClickBonus: 0 },
+				{ id: 'research', name: 'Laboratoire', baseCost: 250000, qty: 0, cps: 500, perClickBonus: 0 },
+				{ id: 'ai', name: 'Serveur AI', baseCost: 2000000, qty: 0, cps: 3500, perClickBonus: 0 },
+
+				// nouveaux items par-clic (augmentent la valeur de chaque clic)
+				{ id: 'glove', name: 'Gant de Clic', baseCost: 200, qty: 0, cps: 0, perClickBonus: 1 },
+				{ id: 'macro', name: 'Macro', baseCost: 1500, qty: 0, cps: 0, perClickBonus: 5 },
+				{ id: 'megaFinger', name: 'Gros Doigt', baseCost: 20000, qty: 0, cps: 0, perClickBonus: 25 }
+			],
+			skins: [
+				{ id: 'classic', name: 'Classique', cost: 0, owned: true },
+				{ id: 'pastel', name: 'Pastel', cost: 500, owned: false },
+				{ id: 'neon', name: 'Neon', cost: 2500, owned: false },
+				{ id: 'choco', name: 'Chocolat', cost: 12000, owned: false }
+			],
+			selectedSkin: 'classic',
+			lastTick: Date.now()
+		};
+
+		let state = loadState();
+		// evitar gros delta a la primeira tick após load
+		state.lastTick = Date.now();
+
+		// helpers
+		function fmt(n) {
+			if (!isFinite(n)) return '0';
+			if (Math.abs(n) < 1000) return (Math.abs(n) % 1 === 0) ? String(Math.floor(n)) : n.toFixed(2);
+			if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+			if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+			if (n >= 1e3) return (n / 1e3).toFixed(2) + 'K';
+			return Math.floor(n).toString();
+		}
+
+		function itemCost(item) {
+			// custo escalonado (cada compra aumenta 15%)
+			return Math.ceil(item.baseCost * Math.pow(1.15, item.qty));
+		}
+
+		/* new helper: custo total para comprar `count` unidades do mesmo item */
+		function bulkCost(item, count) {
+			count = Number(count) || 1;
+			if (count <= 0) return 0;
+			let total = 0;
+			for (let i = 0; i < count; i++) {
+				const price = Math.ceil(item.baseCost * Math.pow(1.15, (Number(item.qty) || 0) + i));
+				total += price;
+			}
+			return total;
+		}
+
+		function totalCPS() {
+			return state.items.reduce((s, it) => {
+				const qty = Number(it.qty) || 0;
+				const cps = Number(it.cps) || 0;
+				return s + qty * cps;
+			}, 0);
+		}
+
+		// salvar / carregar (inclui skins e selectedSkin)
+		function saveState() {
+			localStorage.setItem('mini_cookie_state_v1', JSON.stringify(state));
+		}
+		function loadState() {
+			try {
+				const raw = localStorage.getItem('mini_cookie_state_v1');
+				if (!raw) return JSON.parse(JSON.stringify(defaultState));
+
+				const parsed = JSON.parse(raw);
+
+				const result = {
+					cookies: Number(parsed.cookies) || 0,
+					totalCookies: Number(parsed.totalCookies) || 0,
+					perClick: Number(parsed.perClick) || defaultState.perClick,
+					bestCPS: Number(parsed.bestCPS) || 0,
+					lastTick: Date.now(),
+					items: [],
+					skins: [],
+					selectedSkin: parsed.selectedSkin || defaultState.selectedSkin
+				};
+
+				const savedItemsById = (parsed.items || []).reduce((m, it) => { if (it && it.id) m[it.id] = it; return m; }, {});
+				defaultState.items.forEach(d => {
+					const s = savedItemsById[d.id] || {};
+					// restore perClickBonus as well so "par clic" items keep their effect
+					const perClick = Number(s.perClickBonus ?? d.perClickBonus);
+					const cpsVal = Number(s.cps ?? d.cps);
+					result.items.push({
+						id: d.id,
+						name: d.name || d.id,
+						baseCost: Number(s.baseCost ?? d.baseCost) || d.baseCost,
+						qty: Number(s.qty) || 0,
+						cps: isFinite(cpsVal) ? cpsVal : (d.cps || 0),
+						perClickBonus: isFinite(perClick) ? perClick : (d.perClickBonus || 0)
+					});
+				});
+
+				const savedSkinsById = (parsed.skins || []).reduce((m, s) => { if (s && s.id) m[s.id] = s; return m; }, {});
+				defaultState.skins.forEach(s => {
+					const ss = savedSkinsById[s.id] || {};
+					result.skins.push({
+						id: s.id,
+						name: s.name,
+						cost: Number(ss.cost ?? s.cost) || s.cost,
+						owned: Boolean(ss.owned || s.owned)
+					});
+				});
+
+				// si selectedSkin was saved but not owned, keep classic
+				if (!result.skins.find(s => s.id === result.selectedSkin && s.owned)) {
+					result.selectedSkin = defaultState.selectedSkin;
+				}
+
+				return result;
+			} catch (e) {
+				return JSON.parse(JSON.stringify(defaultState));
+			}
+		}
+		function resetState() {
+			if (!confirm('Êtes-vous sûr de vouloir réinitialiser la partie ?')) return;
+			state = JSON.parse(JSON.stringify(defaultState));
+			state.lastTick = Date.now();
+			saveState();
+			renderAll();
+		}
+
+		// animação visual mínima
+		function animatePulse() {
+			const btn = document.getElementById('cookieBtn');
+			if (!btn) return;
+			const p = document.createElement('div');
+			p.className = 'pulse';
+			p.style.position = 'absolute';
+			p.style.left = '50%';
+			p.style.top = '50%';
+			p.style.transform = 'translate(-50%,-50%) scale(1)';
+			p.style.pointerEvents = 'none';
+			const size = 24 + Math.random() * 30;
+			p.style.width = p.style.height = size + 'px';
+			p.style.background = 'rgba(255,255,255,0.6)';
+			p.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)';
+			p.style.borderRadius = '50%';
+			p.style.transition = 'transform 600ms ease, opacity 600ms ease';
+			p.style.zIndex = '6';
+			btn.appendChild(p);
+			requestAnimationFrame(() => {
+				p.style.transform = 'translate(-50%,-50%) scale(2.3)';
+				p.style.opacity = '0';
+			});
+			setTimeout(() => { p.remove(); }, 650);
+		}
+
+		// eventos UI
+		const cookieBtn = document.getElementById('cookieBtn');
+		cookieBtn.addEventListener('click', (e) => clickCookie(state.perClick, e));
+		cookieBtn.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); clickCookie(state.perClick); } });
+		document.addEventListener('keydown', (e) => { if (e.code === 'Space') { e.preventDefault(); clickCookie(state.perClick); } });
+
+		document.getElementById('resetBtn').addEventListener('click', resetState);
+
+		// novo: skins modal controls
+		const skinsBtn = document.getElementById('skinsBtn');
+		const skinsModal = document.getElementById('skinsModal');
+		const skinsModalContent = document.getElementById('skinsModalContent');
+		const closeSkinsBtn = document.getElementById('closeSkinsBtn');
+
+		skinsBtn.addEventListener('click', () => { renderSkinsModal(); openSkinsModal(); });
+		closeSkinsBtn.addEventListener('click', closeSkinsModal);
+		// fechar clicando no overlay (fora do modal)
+		skinsModal.addEventListener('click', (e) => { if (e.target === skinsModal) closeSkinsModal(); });
+		// fechar com Esc
+		document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !skinsModal.classList.contains('hidden')) closeSkinsModal(); });
+
+		// timers
+		// Ensure entity runtime vars exist early to avoid "Cannot access 'entities' before initialization"
+		const entitiesContainer = document.getElementById('entities');
+		let entities = []; // runtime array of entity objects
+		let lastEntityFrame = performance.now();
+
+		setInterval(tick, 200);
+		setInterval(saveState, 5000);
+		window.addEventListener('beforeunload', saveState);
+
+		// core functions
+		function clickCookie(amount, event) {
+			state.cookies += amount;
+			state.totalCookies += amount;
+			animatePulse();
+
+			// Click Particle
+			if (event) {
+				createClickParticle(event.clientX, event.clientY, `+${fmt(amount)}`);
+			} else {
+				// Fallback for keyboard/simulated clicks
+				const btn = document.getElementById('cookieBtn');
+				const rect = btn.getBoundingClientRect();
+				createClickParticle(rect.left + rect.width / 2, rect.top + rect.height / 2, `+${fmt(amount)}`);
+			}
+
+			renderAll();
+		}
+
+		function createClickParticle(x, y, text) {
+			const el = document.createElement('div');
+			el.className = 'click-text';
+			el.textContent = text;
+			el.style.left = x + 'px';
+			el.style.top = y + 'px';
+			document.body.appendChild(el);
+			setTimeout(() => el.remove(), 1000);
+		}
+
+		function showNotification(title, message, icon = '🍪') {
+			const area = document.getElementById('notificationArea');
+			const el = document.createElement('div');
+			el.className = 'notification';
+			el.innerHTML = `<div style="font-size:24px">${icon}</div><div><div class="title">${title}</div><div>${message}</div></div>`;
+			area.appendChild(el);
+			setTimeout(() => el.remove(), 3500);
+		}
+
+		// Golden Cookie Logic
+		let goldenCookieTimer = 0;
+		const GOLDEN_COOKIE_MIN_TIME = 60; // seconds
+		const GOLDEN_COOKIE_MAX_TIME = 180;
+
+		function spawnGoldenCookie() {
+			const el = document.createElement('div');
+			el.className = 'golden-cookie';
+			const w = window.innerWidth - 100;
+			const h = window.innerHeight - 100;
+			el.style.left = (Math.random() * w + 50) + 'px';
+			el.style.top = (Math.random() * h + 50) + 'px';
+
+			el.onclick = (e) => {
+				e.stopPropagation();
+				const reward = Math.max(state.cookies * 0.15, totalCPS() * 900) + 13; // 15% of bank or 15 mins of CPS
+				state.cookies += reward;
+				state.totalCookies += reward;
+				createClickParticle(e.clientX, e.clientY, `+${fmt(reward)}!`);
+				showNotification('Golden Cookie!', `You found a golden cookie and gained ${fmt(reward)} cookies!`, '🌟');
+				el.remove();
+				renderAll();
+			};
+
+			document.body.appendChild(el);
+
+			// Disappear after 13 seconds
+			setTimeout(() => {
+				if (el.parentNode) {
+					el.style.opacity = '0';
+					setTimeout(() => el.remove(), 500);
+				}
+			}, 13000);
+		}
+
+		function updateGoldenCookie(dt) {
+			goldenCookieTimer -= dt;
+			if (goldenCookieTimer <= 0) {
+				spawnGoldenCookie();
+				goldenCookieTimer = GOLDEN_COOKIE_MIN_TIME + Math.random() * (GOLDEN_COOKIE_MAX_TIME - GOLDEN_COOKIE_MIN_TIME);
+			}
+		}
+
+		function tick() {
+			const now = Date.now();
+			let delta = (now - (state.lastTick || now)) / 1000;
+			// sanity: clamp delta (e.g., on resume from sleep)
+			if (delta > 10) delta = 0.2;
+			state.lastTick = now;
+
+			const cps = totalCPS();
+			const earned = cps * delta;
+			state.cookies += earned;
+			state.totalCookies += earned;
+
+			if (cps > state.bestCPS) state.bestCPS = cps;
+
+			updateGoldenCookie(delta);
+
+			renderAll();
+		}
+
+		function applySkin() {
+			const btn = document.getElementById('cookieBtn');
+			if (!btn) return;
+			const skin = state.skins.find(s => s.id === state.selectedSkin) || state.skins[0];
+
+			// estilos de fundo do botão
+			let bg, box;
+			switch (skin.id) {
+				case 'pastel':
+					bg = 'radial-gradient(circle at 30% 30%, #fff4f8, #ffe6c8 40%, #f0d1ff 100%)';
+					box = '0 12px 34px rgba(240,180,255,0.12), 0 0 28px rgba(255,200,255,0.06)';
+					break;
+				case 'neon':
+					bg = 'radial-gradient(circle at 30% 30%, #fff9b0, #ffd36a 40%, #ff7ee2 100%)';
+					box = '0 14px 44px rgba(255,110,220,0.14), 0 0 40px rgba(25,240,255,0.12)';
+					break;
+				case 'choco':
+					bg = 'radial-gradient(circle at 30% 30%, #f3d6b8, #d8a064 40%, #8b5a2b 100%)';
+					box = '0 12px 34px rgba(100,60,20,0.12)';
+					break;
+				default:
+					bg = 'radial-gradient(circle at 30% 30%, #ffefc2, #f1c27d 40%, #d68a2a 100%)';
+					box = '0 10px 30px rgba(0,0,0,0.6), 0 0 28px rgba(25,240,255,0.04)';
+			}
+			btn.style.background = bg;
+			btn.style.boxShadow = box;
+
+			// aplicar cores ao SVG interno para que o "biscoito" mude de cor
+			const svg = btn.querySelector('svg');
+			if (svg) {
+				const circles = svg.querySelectorAll('circle');
+				const path = svg.querySelector('path');
+
+				let baseFill = '#ffefc2';
+				let spotFill = '#6b3b1a';
+				let mouthStroke = '#6b3b1a';
+
+				switch (skin.id) {
+					case 'pastel':
+						baseFill = '#fff4e8';
+						spotFill = '#c88aa3';
+						mouthStroke = '#6b3b1a';
+						break;
+					case 'neon':
+						baseFill = '#fffde0';
+						spotFill = '#ff55d1';
+						mouthStroke = '#6b3b1a';
+						break;
+					case 'choco':
+						baseFill = '#e0b992';
+						spotFill = '#6b3b1a';
+						mouthStroke = '#4c2f18';
+						break;
+					default:
+						baseFill = '#ffefc2';
+						spotFill = '#6b3b1a';
+						mouthStroke = '#6b3b1a';
+				}
+
+				if (circles.length > 0) {
+					circles[0].setAttribute('fill', baseFill);
+					for (let i = 1; i < circles.length; i++) {
+						circles[i].setAttribute('fill', spotFill);
+					}
+				}
+				if (path) path.setAttribute('stroke', mouthStroke);
+				svg.style.transition = 'all 220ms ease';
+			}
+		}
+
+		function renderAll() {
+			// infos
+			document.getElementById('cookies').textContent = fmt(state.cookies);
+			document.getElementById('cps').textContent = fmt(totalCPS());
+			document.getElementById('perClick').textContent = fmt(state.perClick);
+			document.getElementById('totalCookies').textContent = fmt(state.totalCookies);
+			document.getElementById('bestCPS').textContent = fmt(state.bestCPS);
+
+			// items shop (DOM)
+			const itemsContainer = document.getElementById('items');
+			itemsContainer.innerHTML = '';
+			state.items.forEach(item => {
+				const cost1 = itemCost(item);
+				const cost10 = bulkCost(item, 10);
+				const affordable1 = Number(state.cookies) >= Number(cost1);
+				const affordable10 = Number(state.cookies) >= Number(cost10);
+
+				const itemEl = document.createElement('div');
+				itemEl.className = 'item';
+				if (affordable1) itemEl.classList.add('affordable');
+
+				// top row: name + qty badge
+				const top = document.createElement('div'); top.className = 'top';
+				const metaLeft = document.createElement('div'); metaLeft.className = 'meta-left';
+				const nameEl = document.createElement('div'); nameEl.className = 'name'; nameEl.textContent = item.name;
+
+				// effects string (CPS and/or per-click)
+				const eff = [];
+				if (Number(item.cps) && Number(item.cps) !== 0) eff.push(`${fmt(item.cps)} cps`);
+				if (Number(item.perClickBonus) && Number(item.perClickBonus) !== 0) eff.push(`${fmt(item.perClickBonus)} par clic`);
+				const effectEl = document.createElement('div'); effectEl.className = 'effect'; effectEl.textContent = eff.length ? eff.join(' · ') : '+0';
+
+				metaLeft.appendChild(nameEl);
+				metaLeft.appendChild(effectEl);
+				top.appendChild(metaLeft);
+
+				const qty = document.createElement('div'); qty.className = 'qty-badge'; qty.textContent = `×${item.qty}`;
+				top.appendChild(qty);
+
+				// bottom row: price + actions
+				const bottom = document.createElement('div'); bottom.className = 'bottom';
+				const price = document.createElement('div'); price.className = 'price-badge'; price.textContent = fmt(cost1);
+				const actions = document.createElement('div'); actions.className = 'actions';
+
+				const b1 = document.createElement('button'); b1.className = 'buy'; b1.textContent = '×1';
+				b1.disabled = !affordable1; b1.title = `Acheter 1 (${fmt(cost1)})`; b1.addEventListener('click', () => buyItem(item.id, 1));
+				const b10 = document.createElement('button'); b10.className = 'buy'; b10.textContent = `×10 (${fmt(cost10)})`;
+				b10.disabled = !affordable10; b10.title = `Acheter 10 (${fmt(cost10)})`; b10.addEventListener('click', () => buyItem(item.id, 10));
+
+				actions.appendChild(b1); actions.appendChild(b10);
+				bottom.appendChild(price); bottom.appendChild(actions);
+
+				itemEl.appendChild(top);
+				itemEl.appendChild(bottom);
+				itemsContainer.appendChild(itemEl);
+			});
+
+			// aplicar skin visualmente
+			applySkin();
+			// sincronizar e iniciar animação das entidades visuais (curseurs, grandmas, etc.)
+			renderEntities();
+
+			// also call renderEntities after load to initialize visuals once
+			// ensure to call once on startup (renderAll already called at the end of the script)
+			// renderEntities();
+		}
+
+		// modal functions: render / open / close
+		function renderSkinsModal() {
+			// rebuild modal content every time so buttons reflect current state
+			skinsModalContent.innerHTML = '';
+			state.skins.forEach(s => {
+				const skinEl = document.createElement('div');
+				skinEl.className = 'skin';
+
+				const name = document.createElement('div');
+				name.className = 'name';
+				name.textContent = s.name;
+
+				const costEl = document.createElement('div');
+				costEl.className = 'cost';
+				costEl.textContent = s.owned ? 'Débloqué' : fmt(s.cost) + ' cookies';
+
+				// preview
+				const preview = document.createElement('div');
+				preview.className = 'skin-preview';
+				applySkinToElement(s.id, preview);
+
+				const actionWrap = document.createElement('div');
+				const btn = document.createElement('button');
+				btn.type = 'button'; // importante
+				btn.className = 'skin-btn';
+
+				const affordable = Number(state.cookies) >= Number(s.cost);
+				const selected = state.selectedSkin === s.id;
+
+				if (s.owned) {
+					btn.textContent = selected ? 'Équipé' : 'Équiper';
+					btn.disabled = selected;
+					btn.addEventListener('click', (ev) => {
+						ev.stopPropagation();
+						equipSkin(s.id);
+						// atualiza modal e página
+						renderSkinsModal();
+					});
+				} else {
+					btn.textContent = `Acheter (${fmt(s.cost)})`;
+					btn.disabled = !affordable;
+					btn.addEventListener('click', (ev) => {
+						ev.stopPropagation();
+						const ok = buySkin(s.id);
+						if (ok) renderSkinsModal();
+					});
+				}
+
+				actionWrap.appendChild(btn);
+				skinEl.appendChild(name);
+				skinEl.appendChild(preview);
+				skinEl.appendChild(costEl);
+				skinEl.appendChild(actionWrap);
+				skinsModalContent.appendChild(skinEl);
+			});
+		}
+
+		function openSkinsModal() {
+			skinsModal.classList.remove('hidden');
+			skinsModal.setAttribute('aria-hidden', 'false');
+			document.body.style.overflow = 'hidden';
+		}
+		function closeSkinsModal() {
+			skinsModal.classList.add('hidden');
+			skinsModal.setAttribute('aria-hidden', 'true');
+			document.body.style.overflow = '';
+			// ao fechar, garantir que a loja e botão principal atualizem
+			renderAll();
+			saveState();
+		}
+
+		function buyItem(itemId, count = 1) {
+			const item = state.items.find(i => i.id === itemId);
+			if (!item) return false;
+			count = Number(count) || 1;
+			if (count <= 0) return false;
+
+			const total = bulkCost(item, count);
+			if (!isFinite(total) || total <= 0) return false;
+			if (state.cookies < total) return false;
+
+			// pagar e aplicar compras
+			state.cookies -= total;
+			item.qty = Number(item.qty || 0) + count;
+
+			// aplicar bônus por clique se existir
+			const perClickBonus = Number(item.perClickBonus || 0);
+			if (perClickBonus) {
+				state.perClick = Number(state.perClick || 0) + perClickBonus * count;
+			}
+
+			// salvar e atualizar UI
+			saveState();
+			renderAll();
+			// se o modal de skins estiver aberto, re-render para atualizar botões
+			if (typeof skinsModal !== 'undefined' && !skinsModal.classList.contains('hidden')) renderSkinsModal();
+			return true;
+		}
+
+		function applySkinToElement(skinId, el) {
+			// aplica estilos simples ao elemento passado (preview) com base no skinId
+			if (!el) return;
+			switch (skinId) {
+				case 'pastel':
+					el.style.background = 'radial-gradient(circle at 30% 30%, #ffe4f0, #ffd1a8 40%, #f0b6ff 100%)';
+					el.style.boxShadow = '0 6px 16px rgba(240,180,255,0.12)';
+					break;
+				case 'neon':
+					el.style.background = 'radial-gradient(circle at 30% 30%, #fff9b0, #ffd36a 40%, #ff7ee2 100%)';
+					el.style.boxShadow = '0 6px 16px rgba(255,110,220,0.12)';
+					break;
+				case 'choco':
+					el.style.background = 'radial-gradient(circle at 30% 30%, #f3d6b8, #d8a064 40%, #8b5a2b 100%)';
+					el.style.boxShadow = '0 6px 16px rgba(100,60,20,0.12)';
+					break;
+				default:
+					el.style.background = 'radial-gradient(circle at 30% 30%, #ffefc2, #f1c27d 40%, #d68a2a 100%)';
+					el.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)';
+			}
+			// manter formato circular pequeno para preview
+			el.style.width = '56px';
+			el.style.height = '56px';
+			el.style.borderRadius = '50%';
+			el.style.margin = '6px auto';
+		}
+
+		/* renderSkinsModal: cria preview e buttons com type="button" e stopPropagation para evitar problemas */
+		function renderSkinsModal() {
+			// rebuild modal content every time so buttons reflect current state
+			skinsModalContent.innerHTML = '';
+			state.skins.forEach(s => {
+				const skinEl = document.createElement('div');
+				skinEl.className = 'skin';
+
+				const name = document.createElement('div');
+				name.className = 'name';
+				name.textContent = s.name;
+
+				const costEl = document.createElement('div');
+				costEl.className = 'cost';
+				costEl.textContent = s.owned ? 'Débloqué' : fmt(s.cost) + ' cookies';
+
+				// preview
+				const preview = document.createElement('div');
+				preview.className = 'skin-preview';
+				applySkinToElement(s.id, preview);
+
+				const actionWrap = document.createElement('div');
+				const btn = document.createElement('button');
+				btn.type = 'button'; // importante
+				btn.className = 'skin-btn';
+
+				const affordable = Number(state.cookies) >= Number(s.cost);
+				const selected = state.selectedSkin === s.id;
+
+				if (s.owned) {
+					btn.textContent = selected ? 'Équipé' : 'Équiper';
+					btn.disabled = selected;
+					btn.addEventListener('click', (ev) => {
+						ev.stopPropagation();
+						equipSkin(s.id);
+						// atualiza modal e página
+						renderSkinsModal();
+					});
+				} else {
+					btn.textContent = `Acheter (${fmt(s.cost)})`;
+					btn.disabled = !affordable;
+					btn.addEventListener('click', (ev) => {
+						ev.stopPropagation();
+						const ok = buySkin(s.id);
+						if (ok) renderSkinsModal();
+					});
+				}
+
+				actionWrap.appendChild(btn);
+				skinEl.appendChild(name);
+				skinEl.appendChild(preview);
+				skinEl.appendChild(costEl);
+				skinEl.appendChild(actionWrap);
+				skinsModalContent.appendChild(skinEl);
+			});
+		}
+
+		/* buySkin/equipSkin: garantias numéricas, salvar, aplicar skin no botão principal e re-render */
+		function buySkin(skinId) {
+			const skin = state.skins.find(s => s.id === skinId);
+			if (!skin) return false;
+			if (skin.owned) return false;
+			const costNum = Number(skin.cost) || 0;
+			if (!isFinite(costNum) || state.cookies < costNum) return false;
+
+			state.cookies -= costNum;
+			skin.owned = true;
+			state.selectedSkin = skin.id;
+
+			saveState();
+			applySkin();   // aplicar imediatamente ao botão principal
+			renderAll();   // atualizar valores
+			return true;
+		}
+
+		function equipSkin(skinId) {
+			const skin = state.skins.find(s => s.id === skinId);
+			if (!skin || !skin.owned) return false;
+			state.selectedSkin = skin.id;
+			saveState();
+			applySkin();   // garantir que o botão principal mude instantaneamente
+			renderAll();
+			return true;
+		}
+
+		// exposer algumas funções ao escopo global para os atributos onclick do HTML
+		window.buyItem = buyItem;
+		window.buySkin = buySkin;
+		window.equipSkin = equipSkin;
+
+		// render inicial
+		// NOTE: moved the initial render call further down so ENTITY_MAP and entity helpers exist
+		// (renderAll will be invoked at the end of the script)
+
+		// new: mapping item -> image, size class, base speed (px/sec)
+		const ENTITY_MAP = {
+			'cursor': { src: '../images/cursor.png', size: 'small', speed: 40 },
+			'grandma': { src: '../images/grandma.png', size: 'medium', speed: 28 },
+			'farm': { src: '../images/ferme.png', size: 'medium', speed: 22 },
+			'mine': { src: '../images/mine.png', size: 'medium', speed: 36 },
+			'factory': { src: '../images/usine.png', size: 'large', speed: 18 },
+			'bank': { src: '../images/banque.png', size: 'large', speed: 14 }
+		};
+
+		// runtime state for entities
+		// const entitiesContainer = document.getElementById('entities');
+		// let entities = []; // array of {el, type, x,y,vx,vy}
+		// let lastEntityFrame = performance.now();
+
+		// create one entity DOM + state
+		function createEntity(type) {
+			const info = ENTITY_MAP[type];
+			if (!info) return null;
+			const img = document.createElement('img');
+			img.className = `entity ${info.size}`;
+			img.src = info.src;
+			img.alt = '';
+			img.draggable = false;
+			// random position within viewport
+			const w = window.innerWidth, h = window.innerHeight;
+			const x = Math.random() * (w - 10);
+			const y = Math.random() * (h - 10);
+			// random direction velocity scaled by info.speed
+			const angle = Math.random() * Math.PI * 2;
+			const speed = info.speed * (0.7 + Math.random() * 0.6); // variation
+			const vx = Math.cos(angle) * speed;
+			const vy = Math.sin(angle) * speed;
+
+			const item = { el: img, type, x, y, vx, vy };
+			img.style.transform = `translate(${x}px, ${y}px)`;
+			entities.push(item);
+			entitiesContainer.appendChild(img);
+			return item;
+		}
+
+		// remove last entity of specific type
+		function removeEntityOfType(type) {
+			for (let i = entities.length - 1; i >= 0; i--) {
+				if (entities[i].type === type) {
+					const e = entities.splice(i, 1)[0];
+					if (e && e.el && e.el.parentNode) e.el.parentNode.removeChild(e.el);
+					return true;
+				}
+			}
+			return false;
+		}
+
+		// ensure entities match state quantities (synchronize)
+		function syncEntitiesToState() {
+			// count desired per type
+			const desired = {};
+			state.items.forEach(it => {
+				desired[it.id] = Number(it.qty) || 0;
+			});
+			// current counts
+			const current = {};
+			entities.forEach(e => current[e.type] = (current[e.type] || 0) + 1);
+
+			// add missing
+			Object.keys(desired).forEach(type => {
+				const want = desired[type] || 0;
+				const have = current[type] || 0;
+				const toAdd = Math.max(0, Math.min(300 - entities.length, want - have)); // cap total to avoid perf explosion
+				for (let i = 0; i < toAdd; i++) createEntity(type);
+			});
+			// remove excess
+			Object.keys(current).forEach(type => {
+				const want = desired[type] || 0;
+				let have = current[type] || 0;
+				while (have > want) {
+					if (!removeEntityOfType(type)) break;
+					have--;
+				}
+			});
+		}
+
+		// animation loop for entities (wrap-around)
+		function animateEntities(now) {
+			const dt = Math.min(0.06, (now - lastEntityFrame) / 1000); // seconds, clamp
+			lastEntityFrame = now;
+			const w = window.innerWidth, h = window.innerHeight;
+			for (let i = 0; i < entities.length; i++) {
+				const e = entities[i];
+				e.x += e.vx * dt;
+				e.y += e.vy * dt;
+				// wrap-around edges for smoothness
+				if (e.x < -80) e.x = w + 20;
+				if (e.x > w + 80) e.x = -20;
+				if (e.y < -80) e.y = h + 20;
+				if (e.y > h + 80) e.y = -20;
+				e.el.style.transform = `translate(${e.x}px, ${e.y}px)`;
+			}
+			requestAnimationFrame(animateEntities);
+		}
+
+		// public: call to refresh entities (keeps sync + starts animation once)
+		function renderEntities() {
+			syncEntitiesToState();
+			// start loop if not running
+			if (!animateEntities._started) {
+				animateEntities._started = true;
+				lastEntityFrame = performance.now();
+				requestAnimationFrame(animateEntities);
+			}
+		}
+
+		// initial render: safe to call now that ENTITY_MAP and entity helpers are defined
+		renderAll();
+	</script>
+</body>
+
+</html>

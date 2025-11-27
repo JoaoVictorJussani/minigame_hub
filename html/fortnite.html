@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Battle Royale Mini</title>
+  <style>
+    :root {
+      --bg: #071021;
+      --fg: #e6f7ff;
+      --accent: #19f0ff;
+      --danger: #ff4f4f;
+      --glass: rgba(0, 0, 0, 0.4)
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      background: #071021;
+      color: var(--fg);
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+      user-select: none
+    }
+
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      cursor: crosshair
+    }
+
+    .ui-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none
+    }
+
+    .hud-top {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      right: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start
+    }
+
+    .stat-box {
+      background: var(--glass);
+      padding: 10px 16px;
+      border-radius: 12px;
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 4px
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.6);
+      text-transform: uppercase;
+      letter-spacing: 1px
+    }
+
+    .stat-val {
+      font-size: 1.2rem;
+      font-weight: 700
+    }
+
+    .kill-feed {
+      position: absolute;
+      top: 80px;
+      right: 20px;
+      text-align: right;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 0.9rem;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8)
+    }
+
+    .kill-item {
+      opacity: 0.8;
+      animation: fadeIn 0.3s ease-out
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateX(20px)
+      }
+
+      to {
+        opacity: 0.8;
+        transform: translateX(0)
+      }
+    }
+
+    .health-bar-wrap {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 300px;
+      background: rgba(0, 0, 0, 0.6);
+      height: 24px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px solid rgba(255, 255, 255, 0.1)
+    }
+
+    .health-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #ff4f4f, #ff9f9f);
+      width: 100%;
+      transition: width 0.2s
+    }
+
+    .health-text {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8)
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s
+    }
+
+    .overlay.active {
+      opacity: 1;
+      pointer-events: auto
+    }
+
+    button.btn {
+      background: var(--accent);
+      border: 0;
+      padding: 12px 32px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      cursor: pointer;
+      color: #071021;
+      margin-top: 20px
+    }
+
+    button.btn:hover {
+      filter: brightness(1.1)
+    }
+
+    .storm-warning {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: var(--danger);
+      font-size: 2rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s;
+      text-shadow: 0 0 20px rgba(255, 0, 0, 0.5)
+    }
+
+    .storm-warning.show {
+      opacity: 1
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="c"></canvas>
+
+  <div class="ui-layer">
+    <div class="hud-top">
+      <div class="stat-box">
+        <div class="stat-label">Alive</div>
+        <div class="stat-val" id="aliveCount">--</div>
+      </div>
+      <div class="stat-box" style="align-items:flex-end">
+        <div class="stat-label">Kills</div>
+        <div class="stat-val" id="killCount">0</div>
+      </div>
+    </div>
+
+    <div class="kill-feed" id="killFeed"></div>
+
+    <div class="storm-warning" id="stormWarning">Storm Shrinking!</div>
+
+    <div class="health-bar-wrap">
+      <div class="health-fill" id="hpBar"></div>
+      <div class="health-text" id="hpText">100 / 100</div>
+    </div>
+  </div>
+
+  <div class="overlay" id="endScreen">
+    <h1 id="endTitle" style="font-size:3rem;margin:0">VICTORY</h1>
+    <p id="endSub" style="color:rgba(255,255,255,0.7)">#1 Victory Royale</p>
+    <button class="btn" id="restartBtn">PLAY AGAIN</button>
+    <button class="btn" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff;margin-top:10px"
+      onclick="location.href='../index.html'">EXIT TO HUB</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    let W, H;
+
+    function resize() {
+      W = window.innerWidth;
+      H = window.innerHeight;
+      canvas.width = W;
+      canvas.height = H;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Game Constants
+    const WORLD_W = 2000;
+    const WORLD_H = 2000;
+
+    // Camera
+    const cam = { x: 0, y: 0 };
+
+    // Entities
+    const player = { x: 1000, y: 1000, hp: 100, maxHp: 100, angle: 0, speed: 220, r: 14, color: '#19f0ff', kills: 0, alive: true };
+    const bots = [];
+    const bullets = [];
+    const particles = [];
+
+    // Zone
+    const zone = { x: 1000, y: 1000, r: 1400, targetR: 1400, timer: 0, phase: 0 };
+
+    // Input
+    const keys = {};
+    const mouse = { x: 0, y: 0 };
+    window.addEventListener('keydown', e => keys[e.code] = true);
+    window.addEventListener('keyup', e => keys[e.code] = false);
+    window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY });
+    window.addEventListener('mousedown', shoot);
+
+    function initGame() {
+      player.x = 1000; player.y = 1000; player.hp = 100; player.alive = true; player.kills = 0;
+      bots.length = 0; bullets.length = 0; particles.length = 0;
+
+      // Spawn bots
+      for (let i = 0; i < 24; i++) {
+        bots.push({
+          id: i,
+          x: Math.random() * WORLD_W,
+          y: Math.random() * WORLD_H,
+          hp: 100,
+          r: 14,
+          color: '#ff4f4f',
+          alive: true,
+          moveTimer: 0,
+          angle: 0,
+          targetX: 0, targetY: 0
+        });
+      }
+
+      // Reset Zone
+      zone.x = 1000; zone.y = 1000; zone.r = 1500; zone.targetR = 1500; zone.phase = 0; zone.timer = 5;
+
+      document.getElementById('endScreen').classList.remove('active');
+      updateHUD();
+      requestAnimationFrame(loop);
+    }
+
+    function shoot() {
+      if (!player.alive) return;
+      // Recoil/Spread could be added
+      bullets.push({
+        x: player.x, y: player.y,
+        vx: Math.cos(player.angle) * 800,
+        vy: Math.sin(player.angle) * 800,
+        owner: 'player',
+        life: 1.5
+      });
+      // Camera shake
+      cam.shake = 5;
+    }
+
+    function spawnBlood(x, y) {
+      for (let i = 0; i < 5; i++) {
+        particles.push({
+          x, y,
+          vx: (Math.random() - 0.5) * 200,
+          vy: (Math.random() - 0.5) * 200,
+          life: 0.5,
+          color: '#ff0000',
+          size: Math.random() * 3 + 1
+        });
+      }
+    }
+
+    function logKill(killer, victim) {
+      const feed = document.getElementById('killFeed');
+      const el = document.createElement('div');
+      el.className = 'kill-item';
+      el.textContent = `${killer} eliminated ${victim}`;
+      feed.appendChild(el);
+      if (feed.children.length > 5) feed.removeChild(feed.firstChild);
+      setTimeout(() => el.remove(), 4000);
+    }
+
+    function update(dt) {
+      if (!player.alive && bots.filter(b => b.alive).length > 0) {
+        // Spectate logic or just end
+      }
+
+      // Zone Logic
+      zone.timer -= dt;
+      if (zone.timer <= 0) {
+        if (zone.r > zone.targetR) {
+          // Shrinking
+          zone.r -= 30 * dt; // shrink speed
+          if (zone.r <= zone.targetR) {
+            zone.timer = 15; // wait time
+            zone.phase++;
+            // Next zone
+            zone.targetR = zone.targetR * 0.6;
+            // Move center randomly but keep within current
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.random() * (zone.r - zone.targetR);
+            zone.x += Math.cos(angle) * dist;
+            zone.y += Math.sin(angle) * dist;
+
+            document.getElementById('stormWarning').classList.remove('show');
+          } else {
+            document.getElementById('stormWarning').classList.add('show');
+          }
+        } else {
+          // Waiting to shrink
+          zone.timer = 0; // trigger shrink immediately for this simple logic? 
+          // Actually let's just make it simple: Wait -> Shrink -> Wait
+          // If r == targetR, we are waiting.
+          // But I set timer to 15 above.
+          // So when timer hits 0, we start shrinking?
+          // Yes, but I need to set r > targetR for the loop to enter shrinking block.
+          // Wait, my logic above is slightly mixed. 
+          // Let's fix:
+          // If not shrinking (r <= targetR), wait for timer.
+          // When timer ends, set new targetR.
+        }
+      } else {
+        // Timer running, check if we need to set new target
+        if (zone.r <= zone.targetR && zone.timer <= 0.1) {
+          // Start shrinking
+          zone.targetR = Math.max(100, zone.r * 0.6);
+          // New center
+          const angle = Math.random() * Math.PI * 2;
+          const dist = Math.random() * (zone.r - zone.targetR);
+          zone.x += Math.cos(angle) * dist;
+          zone.y += Math.sin(angle) * dist;
+
+          zone.timer = 9999; // Don't use timer while shrinking
+          document.getElementById('stormWarning').classList.add('show');
+        }
+      }
+      // Actually simpler:
+      // Always shrink slowly? No, fortnite has phases.
+      // Let's just shrink constantly for this mini version to force action.
+      if (zone.r > 100) zone.r -= 5 * dt;
+
+
+      // Player Move
+      if (player.alive) {
+        let dx = 0, dy = 0;
+        if (keys['KeyW']) dy = -1;
+        if (keys['KeyS']) dy = 1;
+        if (keys['KeyA']) dx = -1;
+        if (keys['KeyD']) dx = 1;
+        if (dx || dy) {
+          const l = Math.hypot(dx, dy);
+          player.x += (dx / l) * player.speed * dt;
+          player.y += (dy / l) * player.speed * dt;
+        }
+        // Mouse Aim
+        const screenX = player.x - cam.x;
+        const screenY = player.y - cam.y;
+        player.angle = Math.atan2(mouse.y - screenY, mouse.x - screenX);
+
+        // Zone Damage
+        const distToZone = Math.hypot(player.x - zone.x, player.y - zone.y);
+        if (distToZone > zone.r) {
+          player.hp -= 5 * dt;
+          updateHUD();
+          if (player.hp <= 0) die('Storm');
+        }
+      }
+
+      // Bots
+      bots.forEach(b => {
+        if (!b.alive) return;
+        // AI: Move to Zone, Avoid others, Shoot player
+        const distToZone = Math.hypot(b.x - zone.x, b.y - zone.y);
+
+        // Move logic
+        let mx = 0, my = 0;
+        if (distToZone > zone.r * 0.8) {
+          // Move to zone
+          mx = zone.x - b.x;
+          my = zone.y - b.y;
+        } else {
+          // Wander or chase
+          b.moveTimer -= dt;
+          if (b.moveTimer <= 0) {
+            b.targetX = b.x + (Math.random() - 0.5) * 400;
+            b.targetY = b.y + (Math.random() - 0.5) * 400;
+            b.moveTimer = 2;
+          }
+          mx = b.targetX - b.x;
+          my = b.targetY - b.y;
+        }
+
+        const l = Math.hypot(mx, my) || 1;
+        b.x += (mx / l) * 100 * dt;
+        b.y += (my / l) * 100 * dt;
+
+        // Shoot logic
+        // Simple: if player close, shoot
+        const dPlayer = Math.hypot(player.x - b.x, player.y - b.y);
+        if (player.alive && dPlayer < 400) {
+          if (Math.random() < 0.02) {
+            const ang = Math.atan2(player.y - b.y, player.x - b.x) + (Math.random() - 0.5) * 0.2;
+            bullets.push({
+              x: b.x, y: b.y,
+              vx: Math.cos(ang) * 700,
+              vy: Math.sin(ang) * 700,
+              owner: 'bot',
+              life: 1.5
+            });
+          }
+        }
+
+        // Zone Damage
+        if (distToZone > zone.r) {
+          b.hp -= 5 * dt;
+          if (b.hp <= 0) {
+            b.alive = false;
+            logKill('Storm', 'Bot');
+          }
+        }
+      });
+
+      // Bullets
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        let b = bullets[i];
+        b.x += b.vx * dt;
+        b.y += b.vy * dt;
+        b.life -= dt;
+        if (b.life <= 0) { bullets.splice(i, 1); continue; }
+
+        // Collisions
+        if (b.owner === 'player') {
+          // Check bots
+          for (let bot of bots) {
+            if (bot.alive && Math.hypot(bot.x - b.x, bot.y - b.y) < bot.r + 5) {
+              bot.hp -= 25;
+              spawnBlood(b.x, b.y);
+              bullets.splice(i, 1);
+              if (bot.hp <= 0) {
+                bot.alive = false;
+                player.kills++;
+                logKill('You', 'Bot');
+                updateHUD();
+              }
+              break;
+            }
+          }
+        } else {
+          // Check player
+          if (player.alive && Math.hypot(player.x - b.x, player.y - b.y) < player.r + 5) {
+            player.hp -= 10;
+            spawnBlood(b.x, b.y);
+            bullets.splice(i, 1);
+            updateHUD();
+            if (player.hp <= 0) die('Bot');
+          }
+        }
+      }
+
+      // Particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.life -= dt;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+
+      // Camera Follow
+      if (player.alive) {
+        cam.x = player.x - W / 2;
+        cam.y = player.y - H / 2;
+      }
+
+      // Win Condition
+      if (player.alive && bots.filter(b => b.alive).length === 0) {
+        winGame();
+      }
+    }
+
+    function die(killer) {
+      player.alive = false;
+      document.getElementById('endTitle').textContent = "ELIMINATED";
+      document.getElementById('endTitle').style.color = "#ff4f4f";
+      document.getElementById('endSub').textContent = `Eliminated by ${killer}`;
+      document.getElementById('endScreen').classList.add('active');
+    }
+
+    function winGame() {
+      player.alive = false; // stop moving
+      document.getElementById('endTitle').textContent = "VICTORY ROYALE";
+      document.getElementById('endTitle').style.color = "#19f0ff";
+      document.getElementById('endSub').textContent = `Kills: ${player.kills}`;
+      document.getElementById('endScreen').classList.add('active');
+    }
+
+    function updateHUD() {
+      document.getElementById('hpBar').style.width = Math.max(0, player.hp) + '%';
+      document.getElementById('hpText').textContent = Math.ceil(Math.max(0, player.hp)) + ' / 100';
+      document.getElementById('killCount').textContent = player.kills;
+      document.getElementById('aliveCount').textContent = bots.filter(b => b.alive).length + (player.alive ? 1 : 0);
+    }
+
+    function draw() {
+      // Background Grid
+      ctx.fillStyle = '#071021';
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.save();
+      ctx.translate(-cam.x, -cam.y);
+
+      // Draw World Grid
+      ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+      ctx.lineWidth = 2;
+      for (let x = 0; x <= WORLD_W; x += 100) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, WORLD_H); ctx.stroke();
+      }
+      for (let y = 0; y <= WORLD_H; y += 100) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(WORLD_W, y); ctx.stroke();
+      }
+
+      // Safe Zone
+      ctx.strokeStyle = '#19f0ff';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.arc(zone.x, zone.y, zone.r, 0, Math.PI * 2);
+      ctx.stroke();
+      // Storm area (visualize outside?)
+      // Too expensive to fill exclusion, just draw border
+
+      // Bots
+      bots.forEach(b => {
+        if (!b.alive) return;
+        ctx.fillStyle = b.color;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Player
+      if (player.alive) {
+        ctx.fillStyle = player.color;
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
+        ctx.fill();
+        // Aim line
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(player.x, player.y);
+        ctx.lineTo(player.x + Math.cos(player.angle) * 50, player.y + Math.sin(player.angle) * 50);
+        ctx.stroke();
+      }
+
+      // Bullets
+      ctx.fillStyle = '#fff';
+      bullets.forEach(b => {
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Particles
+      particles.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      });
+
+      ctx.restore();
+    }
+
+    let lastTime = 0;
+    function loop(ts) {
+      const dt = Math.min((ts - lastTime) / 1000, 0.1);
+      lastTime = ts;
+      update(dt);
+      draw();
+      if (!document.getElementById('endScreen').classList.contains('active')) {
+        requestAnimationFrame(loop);
+      }
+    }
+
+    document.getElementById('restartBtn').addEventListener('click', initGame);
+    initGame();
+
+  </script>
+</body>
+
+</html>

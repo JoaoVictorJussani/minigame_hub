@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Boss Fight — Ultimate</title>
+    <style>
+        :root {
+            --bg: #071021;
+            --accent: #ff4fcc;
+            --accent2: #19f0ff;
+            --glass: rgba(255, 255, 255, 0.05)
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            font-family: 'Inter', system-ui, sans-serif;
+            overflow: hidden
+        }
+
+        body {
+            background: radial-gradient(circle at center, #0f1a2b 0%, #071021 100%);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center
+        }
+
+        /* UI Overlay */
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            box-sizing: border-box
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: auto
+        }
+
+        a.back {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            font-weight: 600;
+            background: var(--glass);
+            padding: 8px 16px;
+            border-radius: 20px;
+            backdrop-filter: blur(4px);
+            transition: 0.2s
+        }
+
+        a.back:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff
+        }
+
+        .hud {
+            display: flex;
+            gap: 40px;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 20px
+        }
+
+        .bar-container {
+            width: 300px;
+            text-align: center
+        }
+
+        .bar-label {
+            margin-bottom: 6px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            font-size: 14px;
+            text-transform: uppercase;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5)
+        }
+
+        .bar-track {
+            height: 12px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative
+        }
+
+        .bar-fill {
+            height: 100%;
+            width: 100%;
+            transition: width 0.2s ease-out
+        }
+
+        #bossFill {
+            background: linear-gradient(90deg, #ff4fcc, #ff9f9f);
+            box-shadow: 0 0 12px #ff4fcc
+        }
+
+        #playerFill {
+            background: linear-gradient(90deg, #19f0ff, #80ffea);
+            box-shadow: 0 0 12px #19f0ff
+        }
+
+        #gameCanvas {
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+            border-radius: 12px;
+            background: #050a14
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            pointer-events: auto;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s
+        }
+
+        .overlay.active {
+            opacity: 1;
+            pointer-events: auto
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin: 0 0 20px 0;
+            background: linear-gradient(135deg, #fff, #ccc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent
+        }
+
+        button.btn {
+            background: linear-gradient(135deg, var(--accent2), var(--accent));
+            border: 0;
+            color: #071021;
+            font-weight: 800;
+            padding: 12px 32px;
+            border-radius: 30px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(255, 79, 204, 0.4);
+            transition: transform 0.1s, box-shadow 0.2s
+        }
+
+        button.btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 12px 25px rgba(255, 79, 204, 0.6)
+        }
+
+        .controls-hint {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            text-align: right;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.5);
+            pointer-events: none
+        }
+
+        kbd {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            border: 1px solid rgba(255, 255, 255, 0.2)
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="gameCanvas"></canvas>
+
+    <div class="ui-layer">
+        <header>
+            <a class="back" href="../index.html">← HUB</a>
+            <div style="font-weight:700;font-size:1.2rem;letter-spacing:2px;opacity:0.8">BOSS BATTLE</div>
+            <div style="width:60px"></div>
+        </header>
+
+        <div class="hud">
+            <div class="bar-container">
+                <div class="bar-label" style="color:var(--accent2)">PLAYER</div>
+                <div class="bar-track">
+                    <div class="bar-fill" id="playerFill"></div>
+                </div>
+            </div>
+            <div class="bar-container">
+                <div class="bar-label" style="color:var(--accent)">BOSS</div>
+                <div class="bar-track">
+                    <div class="bar-fill" id="bossFill"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-hint">
+            Move: <kbd>←</kbd> <kbd>→</kbd> &nbsp; Shoot: <kbd>SPACE</kbd> &nbsp; Dash: <kbd>SHIFT</kbd>
+        </div>
+    </div>
+
+    <div class="overlay" id="menuOverlay">
+        <h1 id="menuTitle">BOSS FIGHT</h1>
+        <p id="menuSub" style="margin-bottom:30px;color:rgba(255,255,255,0.7)">Dodge patterns. Shoot the core.</p>
+        <button class="btn" id="startBtn">START MISSION</button>
+    </div>
+
+    <script>
+        (function () {
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // Resize handling
+            let W, H;
+            function resize() {
+                W = Math.min(window.innerWidth - 40, 1000);
+                H = Math.min(window.innerHeight - 140, 600);
+                canvas.width = W;
+                canvas.height = H;
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            // Game State
+            const state = {
+                running: false,
+                gameOver: false,
+                win: false,
+                shake: 0
+            };
+
+            // Entities
+            const player = { x: 0, y: 0, w: 32, h: 32, speed: 350, hp: 100, maxHp: 100, dashCd: 0, iframes: 0 };
+            const boss = { x: 0, y: 0, w: 120, h: 120, hp: 1000, maxHp: 1000, phase: 1, timer: 0, moveTimer: 0, targetX: 0 };
+
+            let bullets = [];
+            let particles = [];
+            let keys = {};
+
+            // Audio simulation (visual feedback only for now)
+            function shake(amount) { state.shake = amount; }
+
+            // Input
+            window.addEventListener('keydown', e => {
+                if (e.code === 'Space') e.preventDefault();
+                keys[e.code] = true;
+            });
+            window.addEventListener('keyup', e => keys[e.code] = false);
+
+            function spawnParticle(x, y, color, speed, count = 1) {
+                for (let i = 0; i < count; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const v = Math.random() * speed;
+                    particles.push({
+                        x, y,
+                        vx: Math.cos(angle) * v,
+                        vy: Math.sin(angle) * v,
+                        life: 1.0,
+                        color: color,
+                        size: Math.random() * 3 + 1
+                    });
+                }
+            }
+
+            function reset() {
+                document.getElementById('startBtn').blur();
+                player.x = W / 2; player.y = H - 60; player.hp = 100; player.dashCd = 0; player.iframes = 0;
+                boss.x = W / 2; boss.y = 100; boss.hp = 1000; boss.phase = 1;
+                bullets = []; particles = [];
+                state.running = true; state.gameOver = false; state.win = false;
+                document.getElementById('menuOverlay').classList.remove('active');
+                resize();
+            }
+
+            function update(dt) {
+                if (!state.running) return;
+
+                // Screen shake decay
+                if (state.shake > 0) state.shake *= 0.9;
+                if (state.shake < 0.5) state.shake = 0;
+
+                // Player Movement
+                let dx = 0;
+                if (keys['ArrowLeft'] || keys['KeyA']) dx = -1;
+                if (keys['ArrowRight'] || keys['KeyD']) dx = 1;
+
+                // Dash
+                if (player.dashCd > 0) player.dashCd -= dt;
+                let speed = player.speed;
+                if ((keys['ShiftLeft'] || keys['ShiftRight']) && player.dashCd <= 0 && dx !== 0) {
+                    player.dashCd = 0.8; // cooldown
+                    player.iframes = 0.3; // dash invincibility
+                    speed *= 4; // dash speed
+                    spawnParticle(player.x, player.y, '#19f0ff', 100, 5);
+                }
+
+                player.x += dx * speed * dt;
+                player.x = Math.max(player.w / 2, Math.min(W - player.w / 2, player.x));
+
+                if (player.iframes > 0) player.iframes -= dt;
+
+                // Shooting
+                if (keys['Space']) {
+                    if (!player.shootCd) player.shootCd = 0;
+                    player.shootCd -= dt;
+                    if (player.shootCd <= 0) {
+                        bullets.push({ x: player.x, y: player.y - 20, vx: 0, vy: -800, type: 'player', r: 4 });
+                        player.shootCd = 0.15;
+                    }
+                }
+
+                // Boss Logic
+                boss.timer += dt;
+                boss.moveTimer -= dt;
+
+                // Boss Movement (smooth lerp)
+                if (boss.moveTimer <= 0) {
+                    boss.targetX = player.w + Math.random() * (W - player.w * 2);
+                    boss.moveTimer = 2.0;
+                }
+                boss.x += (boss.targetX - boss.x) * 2 * dt;
+
+                // Boss Attacks
+                const phaseRate = boss.hp < 500 ? 0.6 : 1.2; // Faster in phase 2
+                if (boss.timer > phaseRate) {
+                    boss.timer = 0;
+                    // Pattern 1: Aimed shot
+                    const angle = Math.atan2(player.y - boss.y, player.x - boss.x);
+                    bullets.push({ x: boss.x, y: boss.y + 40, vx: Math.cos(angle) * 400, vy: Math.sin(angle) * 400, type: 'enemy', r: 6 });
+
+                    // Pattern 2: Spread (Phase 2)
+                    if (boss.hp < 500) {
+                        for (let i = -1; i <= 1; i += 0.5) {
+                            bullets.push({ x: boss.x, y: boss.y + 40, vx: Math.sin(i) * 300, vy: 300, type: 'enemy', r: 5 });
+                        }
+                    }
+                }
+
+                // Bullets Update
+                for (let i = bullets.length - 1; i >= 0; i--) {
+                    let b = bullets[i];
+                    b.x += b.vx * dt;
+                    b.y += b.vy * dt;
+
+                    // Off screen
+                    if (b.y < -50 || b.y > H + 50 || b.x < -50 || b.x > W + 50) {
+                        bullets.splice(i, 1);
+                        continue;
+                    }
+
+                    // Collision Player -> Boss
+                    if (b.type === 'player') {
+                        if (Math.abs(b.x - boss.x) < boss.w / 2 && Math.abs(b.y - boss.y) < boss.h / 2) {
+                            boss.hp -= 10;
+                            spawnParticle(b.x, b.y, '#ff4fcc', 200, 2);
+                            bullets.splice(i, 1);
+                            if (boss.hp <= 0) endGame(true);
+                        }
+                    }
+                    // Collision Enemy -> Player
+                    else if (b.type === 'enemy') {
+                        if (player.iframes <= 0 && Math.abs(b.x - player.x) < player.w / 2 && Math.abs(b.y - player.y) < player.h / 2) {
+                            player.hp -= 10;
+                            shake(10);
+                            player.iframes = 1.0; // hit invincibility
+                            spawnParticle(player.x, player.y, '#ff0000', 200, 5);
+                            bullets.splice(i, 1);
+                            if (player.hp <= 0) endGame(false);
+                        }
+                    }
+                }
+
+                // Particles Update
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    let p = particles[i];
+                    p.x += p.vx * dt;
+                    p.y += p.vy * dt;
+                    p.life -= dt * 2;
+                    if (p.life <= 0) particles.splice(i, 1);
+                }
+
+                // UI Update
+                document.getElementById('playerFill').style.width = (player.hp / player.maxHp * 100) + '%';
+                document.getElementById('bossFill').style.width = (boss.hp / boss.maxHp * 100) + '%';
+            }
+
+            function endGame(win) {
+                state.running = false;
+                state.gameOver = true;
+                state.win = win;
+                const overlay = document.getElementById('menuOverlay');
+                const title = document.getElementById('menuTitle');
+                const sub = document.getElementById('menuSub');
+                const btn = document.getElementById('startBtn');
+
+                title.textContent = win ? "VICTORY" : "DEFEAT";
+                title.style.color = win ? "#19f0ff" : "#ff4f4f";
+                sub.textContent = win ? "Target neutralized." : "Critical failure.";
+                btn.textContent = "RETRY";
+
+                overlay.classList.add('active');
+            }
+
+            function draw() {
+                ctx.save();
+                if (state.shake > 0) {
+                    const dx = (Math.random() - 0.5) * state.shake;
+                    const dy = (Math.random() - 0.5) * state.shake;
+                    ctx.translate(dx, dy);
+                }
+
+                // Clear
+                ctx.fillStyle = '#050a14';
+                ctx.fillRect(0, 0, W, H);
+
+                // Grid background effect
+                ctx.strokeStyle = 'rgba(25, 240, 255, 0.05)';
+                ctx.lineWidth = 1;
+                const gridSize = 40;
+                const offset = (Date.now() / 50) % gridSize;
+                for (let x = 0; x < W; x += gridSize) {
+                    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+                }
+                for (let y = offset; y < H; y += gridSize) {
+                    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+                }
+
+                // Draw Boss
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = '#ff4fcc';
+                ctx.fillStyle = '#ff4fcc';
+                // Simple pulsing effect
+                const pulse = Math.sin(Date.now() / 200) * 5;
+                ctx.fillRect(boss.x - boss.w / 2 - pulse, boss.y - boss.h / 2 - pulse, boss.w + pulse * 2, boss.h + pulse * 2);
+
+                // Boss Eye
+                ctx.fillStyle = '#fff';
+                ctx.shadowBlur = 5;
+                ctx.fillRect(boss.x - 20, boss.y - 10, 40, 20);
+
+                // Draw Player
+                if (player.iframes <= 0 || Math.floor(Date.now() / 100) % 2 === 0) {
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = '#19f0ff';
+                    ctx.fillStyle = '#19f0ff';
+                    // Triangle shape
+                    ctx.beginPath();
+                    ctx.moveTo(player.x, player.y - player.h / 2);
+                    ctx.lineTo(player.x - player.w / 2, player.y + player.h / 2);
+                    ctx.lineTo(player.x + player.w / 2, player.y + player.h / 2);
+                    ctx.fill();
+                }
+
+                // Draw Bullets
+                bullets.forEach(b => {
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = b.type === 'player' ? '#19f0ff' : '#ff4f4f';
+                    ctx.fillStyle = b.type === 'player' ? '#fff' : '#ff9f9f';
+                    ctx.beginPath();
+                    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                // Draw Particles
+                particles.forEach(p => {
+                    ctx.shadowBlur = 0;
+                    ctx.globalAlpha = p.life;
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                });
+
+                ctx.restore();
+            }
+
+            let lastTime = 0;
+            function loop(timestamp) {
+                const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
+                lastTime = timestamp;
+                update(dt);
+                draw();
+                requestAnimationFrame(loop);
+            }
+
+            document.getElementById('startBtn').addEventListener('click', reset);
+
+            // Initial render
+            draw();
+            document.getElementById('menuOverlay').classList.add('active');
+            requestAnimationFrame(loop);
+
+        })();
+    </script>
+</body>
+
+</html>

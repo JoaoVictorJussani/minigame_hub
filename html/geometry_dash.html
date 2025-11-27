@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Neon Dash</title>
+  <style>
+    :root {
+      --bg: #071021;
+      --accent: #ff4fcc;
+      --glass: rgba(255, 255, 255, 0.05)
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      background: #071021;
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+      overflow: hidden
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%
+    }
+
+    .ui-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 20px
+    }
+
+    .hud-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center
+    }
+
+    .score {
+      font-size: 2rem;
+      font-weight: 900;
+      text-shadow: 0 0 10px rgba(255, 79, 204, 0.5)
+    }
+
+    .menu {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(10px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+      transition: opacity 0.3s;
+      opacity: 0;
+      pointer-events: none
+    }
+
+    .menu.active {
+      opacity: 1;
+      pointer-events: auto
+    }
+
+    h1 {
+      font-size: 3rem;
+      margin: 0 0 20px 0;
+      background: linear-gradient(to right, #ff4fcc, #19f0ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent
+    }
+
+    button.btn {
+      background: linear-gradient(135deg, #ff4fcc, #19f0ff);
+      border: 0;
+      padding: 14px 40px;
+      border-radius: 30px;
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: #071021;
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(255, 79, 204, 0.4);
+      transition: 0.2s
+    }
+
+    button.btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 30px rgba(255, 79, 204, 0.6)
+    }
+
+    a.back {
+      color: rgba(255, 255, 255, 0.6);
+      text-decoration: none;
+      margin-top: 20px;
+      font-size: 0.9rem
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="game"></canvas>
+
+  <div class="ui-layer">
+    <div class="hud-top">
+      <div class="score" id="scoreVal">0%</div>
+      <div></div>
+    </div>
+    <div style="text-align:center;opacity:0.6;font-size:0.9rem">Tap / Space to Jump</div>
+  </div>
+
+  <div class="menu" id="mainMenu">
+    <h1 id="menuTitle">NEON DASH</h1>
+    <p id="menuSub" style="color:rgba(255,255,255,0.7);margin-bottom:30px">Avoid the spikes.</p>
+    <button class="btn" id="startBtn">PLAY</button>
+    <a class="back" href="../index.html">Exit to Hub</a>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    let W, H;
+
+    function resize() {
+      W = window.innerWidth;
+      H = window.innerHeight;
+      canvas.width = W;
+      canvas.height = H;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Config
+    const GRAVITY = 2800;
+    const JUMP_FORCE = -900;
+    const SPEED_START = 500;
+
+    let state = {
+      running: false,
+      speed: SPEED_START,
+      distance: 0,
+      bgHue: 220
+    };
+
+    let player = {
+      x: 100, y: 0, w: 50, h: 50,
+      vy: 0,
+      angle: 0,
+      grounded: false,
+      trail: []
+    };
+
+    let obstacles = [];
+    let particles = [];
+    let floorY = 0;
+    let jumpBuffer = 0;
+
+    function reset() {
+      document.getElementById('startBtn').blur();
+      state.running = true;
+      state.speed = SPEED_START;
+      state.distance = 0;
+      player.y = H - 150;
+      player.vy = 0;
+      player.angle = 0;
+      player.trail = [];
+      obstacles = [];
+      particles = [];
+      floorY = H - 100;
+      jumpBuffer = 0;
+
+      document.getElementById('mainMenu').classList.remove('active');
+      lastTime = performance.now();
+      requestAnimationFrame(loop);
+    }
+
+    function spawnObstacle() {
+      // Pattern generation
+      const rand = Math.random();
+      const x = W + 100;
+
+      if (rand < 0.5) {
+        // Spike
+        obstacles.push({ x, y: floorY, w: 40, h: 40, type: 'spike' });
+      } else if (rand < 0.8) {
+        // Block
+        const h = 50 + Math.random() * 40;
+        obstacles.push({ x, y: floorY - h, w: 50, h: h, type: 'block' });
+      } else {
+        // Platform (floating)
+        const h = 20;
+        const yOffset = 100 + Math.random() * 50; // Height above floor
+        obstacles.push({ x, y: floorY - yOffset, w: 100 + Math.random() * 100, h: h, type: 'platform' });
+      }
+    }
+
+    let spawnTimer = 0;
+
+    function update(dt) {
+      if (!state.running) return;
+
+      state.distance += state.speed * dt;
+      state.speed += dt * 10; // slowly faster
+      state.bgHue += dt * 10;
+
+      // Player Physics
+      player.vy += GRAVITY * dt;
+      player.y += player.vy * dt;
+
+      // Ground collision
+      if (player.y >= floorY - player.h) {
+        player.y = floorY - player.h;
+        player.vy = 0;
+        player.grounded = true;
+
+        // Snap rotation
+        const r = player.angle % (Math.PI / 2);
+        if (r < 0.1 || r > (Math.PI / 2 - 0.1)) player.angle = Math.round(player.angle / (Math.PI / 2)) * (Math.PI / 2);
+      } else {
+        player.grounded = false;
+        player.angle += dt * 5; // Rotate while jumping
+      }
+
+      // Jump Buffer Logic
+      if (jumpBuffer > 0) {
+        jumpBuffer -= dt;
+        if (player.grounded) {
+          jump();
+          jumpBuffer = 0;
+        }
+      }
+
+      // Trail
+      player.trail.push({ x: player.x, y: player.y, angle: player.angle, alpha: 1.0 });
+      if (player.trail.length > 10) player.trail.shift();
+
+      // Spawn
+      spawnTimer -= dt;
+      if (spawnTimer <= 0) {
+        spawnObstacle();
+        spawnTimer = 1.2 + Math.random() * 0.8 - (state.speed / 2000);
+      }
+
+      // Obstacles
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        let o = obstacles[i];
+        o.x -= state.speed * dt;
+
+        if (o.x < -200) {
+          obstacles.splice(i, 1);
+          continue;
+        }
+
+        // Collision
+        let ox = o.x;
+        let oy = o.y - o.h; // Top
+
+        if (o.type === 'spike') {
+          if (rectIntersect(player.x, player.y, player.w, player.h, ox + 12, oy + 15, o.w - 24, o.h - 15)) {
+            die();
+          }
+        } else if (o.type === 'platform') {
+          // Platform Logic
+          if (player.x + player.w > ox && player.x < ox + o.w) {
+            // Vertical check for landing
+            // If player bottom is near platform top AND player is falling (vy >= 0)
+            if (player.vy >= 0 && player.y + player.h >= oy && player.y + player.h <= oy + 20) {
+              player.y = oy - player.h;
+              player.vy = 0;
+              player.grounded = true;
+              // Snap rotation
+              const r = player.angle % (Math.PI / 2);
+              if (r < 0.1 || r > (Math.PI / 2 - 0.1)) player.angle = Math.round(player.angle / (Math.PI / 2)) * (Math.PI / 2);
+            }
+            // If player hits the side or bottom (and not landing)
+            else if (rectIntersect(player.x, player.y, player.w, player.h, ox, oy, o.w, o.h)) {
+              die();
+            }
+          }
+        } else {
+          // Standard block hitbox
+          if (rectIntersect(player.x, player.y, player.w, player.h, ox + 4, oy + 4, o.w - 8, o.h - 8)) {
+            die();
+          }
+        }
+      }
+
+      // Particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.life -= dt;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+
+      // Score
+      document.getElementById('scoreVal').textContent = Math.floor(state.distance / 100) + 'm';
+    }
+
+    function rectIntersect(x1, y1, w1, h1, x2, y2, w2, h2) {
+      return !(x2 > x1 + w1 || x2 + w2 < x1 || y2 > y1 + h1 || y2 + h2 < y1);
+    }
+
+    function jump() {
+      if (player.grounded) {
+        player.vy = JUMP_FORCE;
+        player.grounded = false;
+      }
+    }
+
+    function requestJump() {
+      jumpBuffer = 0.15; // 150ms buffer
+      if (player.grounded) jump();
+    }
+
+    function die() {
+      state.running = false;
+      // Explosion
+      for (let i = 0; i < 20; i++) {
+        particles.push({
+          x: player.x + player.w / 2,
+          y: player.y + player.h / 2,
+          vx: (Math.random() - 0.5) * 500,
+          vy: (Math.random() - 0.5) * 500,
+          life: 1.0,
+          color: '#ff4fcc',
+          size: Math.random() * 5 + 2
+        });
+      }
+
+      setTimeout(() => {
+        document.getElementById('menuTitle').textContent = "CRASHED";
+        document.getElementById('menuSub').textContent = "Distance: " + Math.floor(state.distance / 100) + "m";
+        document.getElementById('mainMenu').classList.add('active');
+      }, 500);
+    }
+
+    function draw() {
+      // Background
+      ctx.fillStyle = `hsl(${state.bgHue}, 60%, 10%)`;
+      ctx.fillRect(0, 0, W, H);
+
+      // Floor
+      ctx.fillStyle = `hsl(${state.bgHue}, 60%, 20%)`;
+      ctx.fillRect(0, floorY, W, H - floorY);
+      ctx.strokeStyle = `hsl(${state.bgHue}, 80%, 50%)`;
+      ctx.beginPath(); ctx.moveTo(0, floorY); ctx.lineTo(W, floorY); ctx.stroke();
+
+      // Trail
+      player.trail.forEach(t => {
+        ctx.save();
+        ctx.translate(t.x + player.w / 2, t.y + player.h / 2);
+        ctx.rotate(t.angle);
+        ctx.fillStyle = `rgba(255, 79, 204, 0.3)`;
+        ctx.fillRect(-player.w / 2, -player.h / 2, player.w, player.h);
+        ctx.restore();
+      });
+
+      // Player
+      if (state.running || particles.length > 0) { // hide if dead but particles showing
+        if (state.running) {
+          ctx.save();
+          ctx.translate(player.x + player.w / 2, player.y + player.h / 2);
+          ctx.rotate(player.angle);
+
+          ctx.shadowBlur = 20; ctx.shadowColor = '#ff4fcc';
+          ctx.fillStyle = '#ff4fcc';
+          ctx.fillRect(-player.w / 2, -player.h / 2, player.w, player.h);
+
+          // Inner face
+          ctx.fillStyle = '#000';
+          ctx.fillRect(-10, -10, 20, 20);
+
+          ctx.restore();
+        }
+      }
+
+      // Obstacles
+      obstacles.forEach(o => {
+        ctx.shadowBlur = 10; ctx.shadowColor = '#19f0ff';
+        ctx.fillStyle = '#19f0ff';
+        if (o.type === 'spike') {
+          ctx.beginPath();
+          ctx.moveTo(o.x, o.y);
+          ctx.lineTo(o.x + o.w / 2, o.y - o.h);
+          ctx.lineTo(o.x + o.w, o.y);
+          ctx.fill();
+        } else if (o.type === 'platform') {
+          // Draw platform
+          ctx.fillStyle = '#19f0ff';
+          ctx.fillRect(o.x, o.y - o.h, o.w, o.h);
+          // Add a glowy line on top
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(o.x, o.y - o.h, o.w, 4);
+        } else {
+          ctx.fillRect(o.x, o.y - o.h, o.w, o.h);
+        }
+      });
+
+      // Particles
+      particles.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      });
+    }
+
+    let lastTime = 0;
+    function loop(ts) {
+      const dt = Math.min((ts - lastTime) / 1000, 0.1);
+      lastTime = ts;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    window.addEventListener('keydown', e => {
+      if (e.code === 'Space' || e.code === 'ArrowUp') {
+        e.preventDefault();
+        requestJump();
+      }
+    });
+    window.addEventListener('touchstart', (e) => { e.preventDefault(); requestJump(); });
+    window.addEventListener('mousedown', requestJump);
+
+    document.getElementById('startBtn').addEventListener('click', reset);
+
+    // Initial draw
+    resize();
+    reset();
+    state.running = false; // Wait for start
+    document.getElementById('mainMenu').classList.add('active');
+
+  </script>
+</body>
+
+</html>

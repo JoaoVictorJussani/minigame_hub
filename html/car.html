@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Neon Racer</title>
+    <style>
+        :root {
+            --bg: #071021;
+            --accent: #ff4f4f;
+            --hud: #19f0ff;
+            --glass: rgba(255, 255, 255, 0.05)
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            background: linear-gradient(180deg, #071021, #081428);
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden
+        }
+
+        .wrap {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            align-items: center;
+            justify-content: center
+        }
+
+        header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 10;
+            box-sizing: border-box
+        }
+
+        a.back {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            background: var(--glass);
+            padding: 8px 16px;
+            border-radius: 20px;
+            backdrop-filter: blur(4px)
+        }
+
+        #gameArea {
+            position: relative;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            border-radius: 12px;
+            overflow: hidden
+        }
+
+        canvas {
+            display: block;
+            background: #0c1524
+        }
+
+        .hud-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5)
+        }
+
+        .score-val {
+            color: var(--hud)
+        }
+
+        .game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s
+        }
+
+        .game-over.active {
+            opacity: 1;
+            pointer-events: auto
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin: 0 0 10px 0;
+            background: linear-gradient(to right, #ff4f4f, #ff9f9f);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent
+        }
+
+        button.btn {
+            background: var(--hud);
+            border: 0;
+            padding: 12px 32px;
+            border-radius: 30px;
+            font-weight: 800;
+            font-size: 1.1rem;
+            cursor: pointer;
+            color: #071021;
+            box-shadow: 0 0 20px rgba(25, 240, 255, 0.4);
+            transition: 0.2s
+        }
+
+        button.btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(25, 240, 255, 0.6)
+        }
+
+        .controls-mobile {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 40px;
+            box-sizing: border-box;
+            pointer-events: none
+        }
+
+        .c-btn {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.2)
+        }
+
+        @media(min-width:700px) {
+            .controls-mobile {
+                display: none
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <a class="back" href="../index.html">← HUB</a>
+    </header>
+
+    <div class="wrap">
+        <div id="gameArea">
+            <canvas id="game" width="400" height="640"></canvas>
+            <div class="hud-overlay">SCORE: <span class="score-val" id="scoreDisplay">0</span></div>
+
+            <div class="game-over" id="gameOverScreen">
+                <h1>CRASHED</h1>
+                <p style="margin-bottom:20px;color:rgba(255,255,255,0.6)">Final Score: <span id="finalScore">0</span>
+                </p>
+                <button class="btn" id="restartBtn">RACE AGAIN</button>
+            </div>
+
+            <div class="controls-mobile">
+                <div class="c-btn" id="mLeft">◀</div>
+                <div class="c-btn" id="mRight">▶</div>
+            </div>
+        </div>
+        <div style="margin-top:12px;color:rgba(255,255,255,0.4);font-size:0.9rem">Controls: Arrow Keys or A/D</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width, H = canvas.height;
+
+        let state = {
+            running: false,
+            score: 0,
+            speed: 0,
+            lane: 1, // 0, 1, 2
+            offset: 0, // visual x offset for smooth lane change
+            roadOffset: 0
+        };
+
+        // Lane config
+        const LANES = [W * 0.25, W * 0.5, W * 0.75];
+        const LANE_WIDTH = W * 0.25;
+
+        let obstacles = [];
+        let coins = [];
+        let particles = [];
+
+        // Input
+        let targetLane = 1;
+
+        function reset() {
+            state.running = true;
+            state.score = 0;
+            state.speed = 400; // px/s
+            state.lane = 1;
+            state.offset = 0;
+            targetLane = 1;
+            obstacles = [];
+            coins = [];
+            particles = [];
+            document.getElementById('gameOverScreen').classList.remove('active');
+            document.getElementById('scoreDisplay').textContent = '0';
+            lastTime = performance.now();
+            requestAnimationFrame(loop);
+        }
+
+        function spawnObstacle() {
+            const l = Math.floor(Math.random() * 3);
+            // Ensure not impossible (don't block all lanes at once)
+            // Simple logic: just spawn one
+            obstacles.push({ lane: l, y: -100, type: 'car' });
+        }
+
+        function spawnCoin() {
+            const l = Math.floor(Math.random() * 3);
+            coins.push({ lane: l, y: -100 });
+        }
+
+        let spawnTimer = 0;
+        let coinTimer = 0;
+
+        function update(dt) {
+            if (!state.running) return;
+
+            // Difficulty ramp
+            state.speed += dt * 10;
+
+            // Lane movement (smooth)
+            const tx = LANES[targetLane];
+            const cx = LANES[state.lane] + state.offset; // current visual x is roughly this, simplified logic below:
+
+            // Actually we just track visual x directly for the player
+            // Let's say player.x is independent
+        }
+
+        // Better state management
+        let player = { x: LANES[1], y: H - 100, w: 50, h: 80, angle: 0 };
+
+        function updatePhysics(dt) {
+            if (!state.running) return;
+
+            // Move road texture
+            state.roadOffset = (state.roadOffset + state.speed * dt) % 80;
+
+            // Move player x towards target lane
+            const tx = LANES[targetLane];
+            const dx = tx - player.x;
+            player.x += dx * 10 * dt;
+            player.angle = dx * 0.05; // tilt
+
+            // Spawn
+            spawnTimer -= dt;
+            if (spawnTimer <= 0) {
+                spawnObstacle();
+                spawnTimer = 1.5 - Math.min(1.0, state.score / 5000); // spawn faster as score goes up
+            }
+
+            coinTimer -= dt;
+            if (coinTimer <= 0) {
+                spawnCoin();
+                coinTimer = 0.8;
+            }
+
+            // Move entities
+            const moveAmt = state.speed * dt;
+
+            // Obstacles
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                let o = obstacles[i];
+                o.y += moveAmt; // relative speed (player is static y)
+                // actually player is moving forward, so obstacles move down
+                // if obstacle is slower car, it moves down slower? 
+                // Let's assume static obstacles for now or oncoming traffic
+                // Oncoming traffic moves down at (state.speed + otherCarSpeed)
+                // Static obstacles move down at state.speed
+
+                if (o.y > H + 100) obstacles.splice(i, 1);
+
+                // Collision
+                // Simple box collision
+                if (Math.abs(o.y - player.y) < 70 && Math.abs(LANES[o.lane] - player.x) < 40) {
+                    crash();
+                }
+            }
+
+            // Coins
+            for (let i = coins.length - 1; i >= 0; i--) {
+                let c = coins[i];
+                c.y += moveAmt;
+
+                if (Math.abs(c.y - player.y) < 60 && Math.abs(LANES[c.lane] - player.x) < 40) {
+                    // Collect
+                    state.score += 100;
+                    document.getElementById('scoreDisplay').textContent = state.score;
+                    coins.splice(i, 1);
+                    // Particle effect
+                    // TODO
+                } else if (c.y > H + 50) coins.splice(i, 1);
+            }
+
+            // Score by distance
+            state.score += Math.floor(state.speed * dt * 0.1);
+            document.getElementById('scoreDisplay').textContent = state.score;
+        }
+
+        function crash() {
+            state.running = false;
+            document.getElementById('finalScore').textContent = state.score;
+            document.getElementById('gameOverScreen').classList.add('active');
+        }
+
+        function draw() {
+            // Background
+            ctx.fillStyle = '#0c1524';
+            ctx.fillRect(0, 0, W, H);
+
+            // Road
+            ctx.fillStyle = '#1a2639';
+            const roadW = LANES[2] - LANES[0] + LANE_WIDTH + 40;
+            ctx.fillRect((W - roadW) / 2, 0, roadW, H);
+
+            // Lane markers
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            ctx.lineWidth = 4;
+            ctx.setLineDash([40, 40]);
+            ctx.lineDashOffset = -state.roadOffset;
+
+            ctx.beginPath();
+            ctx.moveTo(LANES[0] + LANE_WIDTH / 2, -50); ctx.lineTo(LANES[0] + LANE_WIDTH / 2, H + 50);
+            ctx.moveTo(LANES[1] + LANE_WIDTH / 2, -50); ctx.lineTo(LANES[1] + LANE_WIDTH / 2, H + 50);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Coins
+            ctx.fillStyle = '#ffd700';
+            ctx.shadowBlur = 10; ctx.shadowColor = '#ffd700';
+            coins.forEach(c => {
+                ctx.beginPath();
+                ctx.arc(LANES[c.lane], c.y, 12, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Obstacles (Cars)
+            obstacles.forEach(o => {
+                const x = LANES[o.lane];
+                const y = o.y;
+                ctx.shadowBlur = 0;
+
+                // Body
+                ctx.fillStyle = '#ff4f4f';
+                roundRect(ctx, x - 22, y - 35, 44, 70, 8);
+
+                // Windows
+                ctx.fillStyle = '#330000';
+                ctx.fillRect(x - 18, y - 20, 36, 15);
+                ctx.fillRect(x - 18, y + 5, 36, 10);
+
+                // Lights
+                ctx.fillStyle = '#ffeb3b';
+                ctx.fillRect(x - 18, y + 28, 10, 5);
+                ctx.fillRect(x + 8, y + 28, 10, 5);
+            });
+
+            // Player
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            ctx.rotate(player.angle);
+
+            ctx.shadowBlur = 15; ctx.shadowColor = '#19f0ff';
+            // Body
+            ctx.fillStyle = '#19f0ff';
+            roundRect(ctx, -22, -35, 44, 70, 8);
+            // Stripes
+            ctx.fillStyle = '#005f6b';
+            ctx.fillRect(-6, -35, 12, 70);
+            // Rear lights
+            ctx.fillStyle = '#ff0000';
+            ctx.shadowBlur = 5; ctx.shadowColor = '#ff0000';
+            ctx.fillRect(-18, 30, 10, 4);
+            ctx.fillRect(8, 30, 10, 4);
+
+            ctx.restore();
+        }
+
+        function roundRect(ctx, x, y, w, h, r) {
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.arcTo(x + w, y, x + w, y + h, r);
+            ctx.arcTo(x + w, y + h, x, y + h, r);
+            ctx.arcTo(x, y + h, x, y, r);
+            ctx.arcTo(x, y, x + w, y, r);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        let lastTime = 0;
+        function loop(ts) {
+            const dt = Math.min((ts - lastTime) / 1000, 0.1);
+            lastTime = ts;
+            updatePhysics(dt);
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        // Controls
+        window.addEventListener('keydown', e => {
+            if (e.key === 'ArrowLeft' || e.key === 'a') changeLane(-1);
+            if (e.key === 'ArrowRight' || e.key === 'd') changeLane(1);
+        });
+
+        function changeLane(dir) {
+            if (!state.running) return;
+            targetLane += dir;
+            if (targetLane < 0) targetLane = 0;
+            if (targetLane > 2) targetLane = 2;
+        }
+
+        document.getElementById('mLeft').addEventListener('touchstart', (e) => { e.preventDefault(); changeLane(-1); });
+        document.getElementById('mRight').addEventListener('touchstart', (e) => { e.preventDefault(); changeLane(1); });
+        document.getElementById('restartBtn').addEventListener('click', reset);
+
+        reset();
+
+    </script>
+</body>
+
+</html>
