@@ -1,119 +1,365 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hub de Jeux</title>
     <style>
-        :root{
-            --bg-1: #071021; /* very dark navy */
+        :root {
+            --bg-1: #071021;
+            /* very dark navy */
             --bg-2: #0f1a2b;
             --neon-pink: #ff4fcc;
             --neon-cyan: #19f0ff;
             --neon-green: #7cff7c;
-            --muted: rgba(255,255,255,0.75);
-            --glass: rgba(255,255,255,0.04);
+            --muted: rgba(255, 255, 255, 0.75);
+            --glass: rgba(255, 255, 255, 0.04);
         }
-        *{box-sizing:border-box}
+
+        * {
+            box-sizing: border-box
+        }
+
         body {
             font-family: Inter, 'Segoe UI', Roboto, Arial, sans-serif;
-            background: radial-gradient(1200px 600px at 10% 10%, rgba(25,10,50,0.22), transparent),
-                        linear-gradient(180deg,var(--bg-1), var(--bg-2));
+            background: radial-gradient(1200px 600px at 10% 10%, rgba(25, 10, 50, 0.22), transparent),
+                linear-gradient(180deg, var(--bg-1), var(--bg-2));
             color: var(--muted);
-            margin: 0; padding: 0;
-            min-height:100vh;
-            -webkit-font-smoothing:antialiased;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
         }
+
         /* animated background shapes */
-        .bg-shapes{position:fixed; inset:0; pointer-events:none; overflow:hidden}
-        .shape{
-            position:absolute; filter: blur(40px); opacity:0.6; mix-blend-mode:screen;
-            transform-origin:center;
+        .bg-shapes {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden
         }
-        .s1{width:500px;height:500px; left:-10%; top:-5%; background:linear-gradient(45deg,var(--neon-pink), var(--neon-cyan)); animation:float 12s ease-in-out infinite}
-        .s2{width:420px;height:420px; right:-8%; bottom:-10%; background:linear-gradient(45deg,var(--neon-green), var(--neon-cyan)); animation:float 14s ease-in-out infinite; animation-delay:2s}
-        .s3{width:260px;height:260px; left:40%; top:60%; background:linear-gradient(45deg,var(--neon-pink), var(--neon-green)); animation:float 10s ease-in-out infinite; animation-delay:4s}
-        @keyframes float{0%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-30px) rotate(8deg)}100%{transform:translateY(0) rotate(0deg)}}
- 
-        header{
-            display:flex; align-items:center; justify-content:space-between; gap:1rem;
-            padding:18px 28px; border-bottom:1px solid rgba(255,255,255,0.03);
-            background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
-            position:relative; z-index:2;
+
+        .shape {
+            position: absolute;
+            filter: blur(40px);
+            opacity: 0.6;
+            mix-blend-mode: screen;
+            transform-origin: center;
         }
-        .logo{display:flex; align-items:center; gap:12px}
-        .logo svg{width:52px; height:52px}
-        h1{ font-size:1.35rem; margin:0; color:#fff; letter-spacing:0.6px}
-        .subtitle{font-size:0.85rem; color:rgba(255,255,255,0.6)}
- 
-        .controls{display:flex; gap:12px; align-items:center}
-        .search{background:var(--glass); border:1px solid rgba(255,255,255,0.04); padding:8px 12px; border-radius:999px; color:var(--muted); display:flex; align-items:center; gap:8px}
-        .search input{background:transparent; border:0; outline:0; color:var(--muted); width:220px}
-        .filter-btn{background:transparent; border:1px solid rgba(255,255,255,0.06); padding:8px 12px; border-radius:10px; color:var(--muted); cursor:pointer}
- 
-        main{padding:36px 28px; max-width:1100px; margin:24px auto; position:relative; z-index:2}
-        .grid{display:grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap:20px}
- 
-        .card{
-            background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-            border:1px solid rgba(255,255,255,0.04);
-            padding:14px; border-radius:14px; cursor:pointer; color:#fff; overflow:hidden;
-            transition: transform .28s cubic-bezier(.2,.9,.2,1), box-shadow .28s; position:relative;
+
+        .s1 {
+            width: 500px;
+            height: 500px;
+            left: -10%;
+            top: -5%;
+            background: linear-gradient(45deg, var(--neon-pink), var(--neon-cyan));
+            animation: float 12s ease-in-out infinite
         }
-        .card:hover{ transform:translateY(-10px) scale(1.01); box-shadow: 0 18px 40px rgba(2,6,23,0.6)}
-        .thumb{height:120px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border:1px solid rgba(255,255,255,0.03); margin-bottom:12px}
-        .thumb svg{width:76px; height:76px}
-        .title{display:flex; align-items:center; justify-content:space-between; gap:10px}
-        .title h2{font-size:1.05rem; margin:0}
-        .tag{font-size:0.75rem; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.03); color:var(--neon-cyan)}
-        .desc{font-size:0.9rem; color:rgba(255,255,255,0.7); margin-top:8px; min-height:36px}
- 
-        .card::after{content:""; position:absolute; inset:0; pointer-events:none; border-radius:14px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.02)}
- 
+
+        .s2 {
+            width: 420px;
+            height: 420px;
+            right: -8%;
+            bottom: -10%;
+            background: linear-gradient(45deg, var(--neon-green), var(--neon-cyan));
+            animation: float 14s ease-in-out infinite;
+            animation-delay: 2s
+        }
+
+        .s3 {
+            width: 260px;
+            height: 260px;
+            left: 40%;
+            top: 60%;
+            background: linear-gradient(45deg, var(--neon-pink), var(--neon-green));
+            animation: float 10s ease-in-out infinite;
+            animation-delay: 4s
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(0) rotate(0deg)
+            }
+
+            50% {
+                transform: translateY(-30px) rotate(8deg)
+            }
+
+            100% {
+                transform: translateY(0) rotate(0deg)
+            }
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 18px 28px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent);
+            position: relative;
+            z-index: 2;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px
+        }
+
+        .logo svg {
+            width: 52px;
+            height: 52px
+        }
+
+        h1 {
+            font-size: 1.35rem;
+            margin: 0;
+            color: #fff;
+            letter-spacing: 0.6px
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.6)
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            align-items: center
+        }
+
+        .search {
+            background: var(--glass);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            padding: 8px 12px;
+            border-radius: 999px;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        .search input {
+            background: transparent;
+            border: 0;
+            outline: 0;
+            color: var(--muted);
+            width: 220px
+        }
+
+        .filter-btn {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 8px 12px;
+            border-radius: 10px;
+            color: var(--muted);
+            cursor: pointer
+        }
+
+        main {
+            padding: 36px 28px;
+            max-width: 1100px;
+            margin: 24px auto;
+            position: relative;
+            z-index: 2
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px
+        }
+
+        .card {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            padding: 14px;
+            border-radius: 14px;
+            cursor: pointer;
+            color: #fff;
+            overflow: hidden;
+            transition: transform .28s cubic-bezier(.2, .9, .2, 1), box-shadow .28s;
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-10px) scale(1.01);
+            box-shadow: 0 18px 40px rgba(2, 6, 23, 0.6)
+        }
+
+        .thumb {
+            height: 120px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            margin-bottom: 12px
+        }
+
+        .thumb svg {
+            width: 76px;
+            height: 76px
+        }
+
+        .title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px
+        }
+
+        .title h2 {
+            font-size: 1.05rem;
+            margin: 0
+        }
+
+        .tag {
+            font-size: 0.75rem;
+            padding: 6px 8px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--neon-cyan)
+        }
+
+        .desc {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 8px;
+            min-height: 36px
+        }
+
+        .card::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            border-radius: 14px;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02)
+        }
+
         /* neon glow on hover */
-        .card:hover .thumb{box-shadow:0 8px 30px rgba(30,200,255,0.06), 0 0 24px rgba(255,80,200,0.06)}
- 
+        .card:hover .thumb {
+            box-shadow: 0 8px 30px rgba(30, 200, 255, 0.06), 0 0 24px rgba(255, 80, 200, 0.06)
+        }
+
         /* small footer */
-        footer{padding:18px; text-align:center; color:rgba(255,255,255,0.45); font-size:0.85rem}
- 
+        footer {
+            padding: 18px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.45);
+            font-size: 0.85rem
+        }
+
         /* responsive */
-        @media (max-width:640px){ .search input{width:120px} .logo h1{font-size:1rem} }
+        @media (max-width:640px) {
+            .search input {
+                width: 120px
+            }
+
+            .logo h1 {
+                font-size: 1rem
+            }
+        }
+
         /* modal for playing games inline */
-        #gameModal{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:none;align-items:center;justify-content:center;z-index:9999}
-        #gameModal .modal-content{width:94%;max-width:1100px;height:85%;background:#071021;border-radius:12px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,0.6);display:flex;flex-direction:column}
-        #gameModal iframe{flex:1;border:0;background:#000}
-        #gameModal .modal-close{position:absolute;right:12px;top:10px;background:transparent;border:0;color:#fff;font-size:20px;padding:6px 8px;cursor:pointer}
+        #gameModal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999
+        }
+
+        #gameModal .modal-content {
+            width: 94%;
+            max-width: 1100px;
+            height: 85%;
+            background: #071021;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column
+        }
+
+        #gameModal iframe {
+            flex: 1;
+            border: 0;
+            background: #000
+        }
+
+        #gameModal .modal-close {
+            position: absolute;
+            right: 12px;
+            top: 10px;
+            background: transparent;
+            border: 0;
+            color: #fff;
+            font-size: 20px;
+            padding: 6px 8px;
+            cursor: pointer
+        }
+
         /* dark theme override */
-        body.dark{ --bg-1: #f6f8ff; --bg-2:#ffffff; --muted: rgba(5,10,20,0.9); --glass: rgba(2,6,23,0.03); color:var(--muted) }
-        body.dark .card{ background: linear-gradient(180deg, rgba(0,0,0,0.03), rgba(0,0,0,0.01)); border:1px solid rgba(2,6,23,0.04)}
+        body.dark {
+            --bg-1: #f6f8ff;
+            --bg-2: #ffffff;
+            --muted: rgba(5, 10, 20, 0.9);
+            --glass: rgba(2, 6, 23, 0.03);
+            color: var(--muted)
+        }
+
+        body.dark .card {
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0.03), rgba(0, 0, 0, 0.01));
+            border: 1px solid rgba(2, 6, 23, 0.04)
+        }
     </style>
 </head>
+
 <body>
     <div class="bg-shapes" aria-hidden="true">
         <div class="shape s1"></div>
         <div class="shape s2"></div>
         <div class="shape s3"></div>
     </div>
- 
+
     <header>
         <div class="logo">
             <!-- simple gamepad logo -->
             <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <rect x="2" y="18" width="60" height="28" rx="8" fill="url(#g)" />
-                <path d="M18 34h-6v-6" stroke="#071021" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.12"/>
-                <circle cx="22" cy="30" r="2.6" fill="#071021" opacity="0.14"/>
-                <path d="M40 28h6" stroke="#071021" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.12"/>
-                <defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#0ff"/><stop offset="1" stop-color="#f7f"/></linearGradient></defs>
+                <path d="M18 34h-6v-6" stroke="#071021" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    opacity="0.12" />
+                <circle cx="22" cy="30" r="2.6" fill="#071021" opacity="0.14" />
+                <path d="M40 28h6" stroke="#071021" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    opacity="0.12" />
+                <defs>
+                    <linearGradient id="g" x1="0" x2="1">
+                        <stop offset="0" stop-color="#0ff" />
+                        <stop offset="1" stop-color="#f7f" />
+                    </linearGradient>
+                </defs>
             </svg>
             <div>
                 <h1>Hub de Jeux</h1>
                 <div class="subtitle">Collection — Lancer — Partager</div>
             </div>
         </div>
- 
+
         <div class="controls">
             <div class="search" role="search">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 21l-4.35-4.35" stroke="#fff" stroke-opacity="0.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M21 21l-4.35-4.35" stroke="#fff" stroke-opacity="0.7" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                </svg>
                 <input id="search" placeholder="Rechercher un jeu..." aria-label="Rechercher" />
             </div>
             <button class="filter-btn" id="sortBtn">Trier</button>
@@ -121,65 +367,83 @@
             <button class="filter-btn" id="darkToggle" title="Mode sombre">🌙</button>
         </div>
     </header>
- 
+
     <main>
         <div class="grid" id="games">
 
             <!-- Démineur -->
             <div class="card" data-title="Démineur" onclick="location.href='./html/demineur.html'">
                 <div class="thumb" aria-hidden="true">
-                <img src="images/bomb.png" style="height:75px; width:75px;">
+                    <img src="images/bomb.png" style="height:75px; width:75px;">
                 </div>
-                <div class="title"><h2>💣 Démineur</h2><div class="tag">Solo</div></div>
+                <div class="title">
+                    <h2>💣 Démineur</h2>
+                    <div class="tag">Solo</div>
+                </div>
                 <div class="desc">Évite les mines et résous les grilles. Attention aux drapeaux !</div>
             </div>
 
             <!-- Flappy -->
             <div class="card" data-title="Flappy" onclick="location.href='./html/flappy.html'">
                 <div class="thumb">
-                <img src="images/flappy-bird.png" style="height:150px; width:150px;">
+                    <img src="images/flappy-bird.png" style="height:150px; width:150px;">
                 </div>
-                <div class="title"><h2>🐦 Flappy</h2><div class="tag">Arcade</div></div>
+                <div class="title">
+                    <h2>🐦 Flappy</h2>
+                    <div class="tag">Arcade</div>
+                </div>
                 <div class="desc">Pousse l'oiseau, évite les tuyaux et vise le meilleur score.</div>
             </div>
 
             <!-- Pong -->
             <div class="card" data-title="Pong" onclick="escolherPong();">
                 <div class="thumb">
-                <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="8" y="20" width="6" height="24" rx="2" fill="#7cff7c"/>
-                    <rect x="50" y="20" width="6" height="24" rx="2" fill="#19f0ff"/>
-                    <circle cx="32" cy="32" r="3" fill="#fff"/>
-                </svg>
+                    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="8" y="20" width="6" height="24" rx="2" fill="#7cff7c" />
+                        <rect x="50" y="20" width="6" height="24" rx="2" fill="#19f0ff" />
+                        <circle cx="32" cy="32" r="3" fill="#fff" />
+                    </svg>
                 </div>
-                <div class="title"><h2>🏓 Pong</h2><div class="tag">Multijoueur</div></div>
+                <div class="title">
+                    <h2>🏓 Pong</h2>
+                    <div class="tag">Multijoueur</div>
+                </div>
                 <div class="desc">Classique: solo contre IA ou 2 joueurs en local.</div>
             </div>
 
             <!-- Capybara Runner -->
             <div class="card" data-title="Capybara Runner" onclick="location.href='./html/capybara.html'">
                 <div class="thumb">
-                <img src="images/capybara.png" style="height:100px; width:100px;">
+                    <img src="images/capybara.png" style="height:100px; width:100px;">
                 </div>
-                <div class="title"><h2>🦦 Capybara Runner</h2><div class="tag">Runner</div></div>
+                <div class="title">
+                    <h2>🦦 Capybara Runner</h2>
+                    <div class="tag">Runner</div>
+                </div>
                 <div class="desc">Cours, saute et collectionne des fruits en chemin.</div>
             </div>
 
             <!-- Tetris -->
             <div class="card" data-title="Tetris" onclick="location.href='./html/tetris.html'">
                 <div class="thumb">
-                <img src="images/tetris.png" style="height:150px; width:150px;">
+                    <img src="images/tetris.png" style="height:150px; width:150px;">
                 </div>
-                <div class="title"><h2>🧱 Tetris</h2><div class="tag">Arcade</div></div>
+                <div class="title">
+                    <h2>🧱 Tetris</h2>
+                    <div class="tag">Arcade</div>
+                </div>
                 <div class="desc">Choisis de jouer contre l'IA ou un autre joueur!</div>
             </div>
 
             <!-- Slither -->
             <div class="card" data-title="Slither" onclick="escolherSlither();">
                 <div class="thumb">
-                <img src="images/slither.png" style="height:150px; width:150px;">
+                    <img src="images/slither.png" style="height:150px; width:150px;">
                 </div>
-                <div class="title"><h2>🐍 Slither</h2><div class="tag">Multijoueur</div></div>
+                <div class="title">
+                    <h2>🐍 Slither</h2>
+                    <div class="tag">Multijoueur</div>
+                </div>
                 <div class="desc">Choisis de jouer contre l'IA ou un autre joueur!</div>
             </div>
 
@@ -188,16 +452,22 @@
                 <div class="thumb" aria-hidden="true">
                     <img src="images/agar.png" style="height:90px; width:90px;">
                 </div>
-                <div class="title"><h2>🟣 Agar.io </h2><div class="tag">Arcade</div></div>
+                <div class="title">
+                    <h2>🟣 Agar.io </h2>
+                    <div class="tag">Arcade</div>
+                </div>
                 <div class="desc">Contrôlez votre cellule et mangez des bots — jeu local, nombreux bots.</div>
             </div>
 
             <!-- Echo Garden -->
             <div class="card" data-title="Echo_garden" onclick="location.href='./html/echo_garden.html'">
                 <div class="thumb">
-                <img src="images/flower.png" style="height:150px; width:150px;">
+                    <img src="images/flower.png" style="height:150px; width:150px;">
                 </div>
-                <div class="title"><h2>🌸 Echo Garden</h2><div class="tag">Puzzle</div></div>
+                <div class="title">
+                    <h2>🌸 Echo Garden</h2>
+                    <div class="tag">Puzzle</div>
+                </div>
                 <div class="desc">Enregistre ton chemin et utilise des clones pour résoudre les jardins.</div>
             </div>
 
@@ -206,7 +476,10 @@
                 <div class="thumb" aria-hidden="true">
                     <img src="images/2048.png" style="height:90px; width:90px;">
                 </div>
-                <div class="title"><h2>🧩 2048 </h2><div class="tag">Puzzle</div></div>
+                <div class="title">
+                    <h2>🧩 2048 </h2>
+                    <div class="tag">Puzzle</div>
+                </div>
                 <div class="desc">Version neon du classique 2048, combine les chiffres jusqu'à atteindre 2048.</div>
             </div>
 
@@ -215,7 +488,10 @@
                 <div class="thumb" aria-hidden="true">
                     <img src="images/tower.png" style="height:80px; width:80px;">
                 </div>
-                <div class="title"><h2>🧙 Tower Defense: Mini</h2><div class="tag">Stratégie</div></div>
+                <div class="title">
+                    <h2>🧙 Tower Defense: Mini</h2>
+                    <div class="tag">Stratégie</div>
+                </div>
                 <div class="desc">Place des tours et empêche les ennemis d'atteindre la fin. Version pixel light !</div>
             </div>
 
@@ -224,21 +500,28 @@
                 <div class="thumb" aria-hidden="true">
                     <img src="images/space.png" style="height:80px; width:80px;">
                 </div>
-                <div class="title"><h2>🎯 Space Blaster</h2><div class="tag">Arcade</div></div>
+                <div class="title">
+                    <h2>🎯 Space Blaster</h2>
+                    <div class="tag">Arcade</div>
+                </div>
                 <div class="desc">Contrôle une petite navette et détruis les météores ou ennemis qui tombent.</div>
             </div>
 
             <!-- Car Race -->
             <div class="card" data-title="Car Race" onclick="location.href='./html/car.html'">
                 <div class="thumb" aria-hidden="true">
-                    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:120px;height:80px">
-                        <rect x="6" y="22" width="52" height="20" rx="4" fill="#ff4f4f"/>
-                        <rect x="10" y="14" width="44" height="12" rx="3" fill="rgba(255,255,255,0.08)"/>
-                        <circle cx="18" cy="46" r="4" fill="#071021"/>
-                        <circle cx="46" cy="46" r="4" fill="#071021"/>
+                    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"
+                        style="width:120px;height:80px">
+                        <rect x="6" y="22" width="52" height="20" rx="4" fill="#ff4f4f" />
+                        <rect x="10" y="14" width="44" height="12" rx="3" fill="rgba(255,255,255,0.08)" />
+                        <circle cx="18" cy="46" r="4" fill="#071021" />
+                        <circle cx="46" cy="46" r="4" fill="#071021" />
                     </svg>
                 </div>
-                <div class="title"><h2>🏎️ Car Race</h2><div class="tag">Arcade</div></div>
+                <div class="title">
+                    <h2>🏎️ Car Race</h2>
+                    <div class="tag">Arcade</div>
+                </div>
                 <div class="desc">Évite le trafic et tiens le plus longtemps possible. Contrôles: ← → ou A/D.</div>
             </div>
 
@@ -247,8 +530,12 @@
                 <div class="thumb" aria-hidden="true">
                     <img src="images/boss.svg" style="height:90px; width:90px;">
                 </div>
-                <div class="title"><h2>👾 Boss Fight</h2><div class="tag">Arcade</div></div>
-                <div class="desc">Affrontez un boss coriace. Déplacez-vous, tirez et survivez jusqu'à la victoire !</div>
+                <div class="title">
+                    <h2>👾 Boss Fight</h2>
+                    <div class="tag">Arcade</div>
+                </div>
+                <div class="desc">Affrontez un boss coriace. Déplacez-vous, tirez et survivez jusqu'à la victoire !
+                </div>
             </div>
 
             <!-- Whack-a-Mole -->
@@ -256,8 +543,12 @@
                 <div class="thumb" aria-hidden="true">
                     <img src="images/whack.svg" style="height:90px; width:90px;">
                 </div>
-                <div class="title"><h2>🐹 Whack-a-Mole</h2><div class="tag">Arcade</div></div>
-                <div class="desc">Tapez sur les taupes qui apparaissent. Score limité dans le temps — voyez combien vous pouvez en battre !</div>
+                <div class="title">
+                    <h2>🐹 Whack-a-Mole</h2>
+                    <div class="tag">Arcade</div>
+                </div>
+                <div class="desc">Tapez sur les taupes qui apparaissent. Score limité dans le temps — voyez combien vous
+                    pouvez en battre !</div>
             </div>
 
             <!-- Geometry Dash -->
@@ -265,8 +556,12 @@
                 <div class="thumb" aria-hidden="true">
                     <img src="images/geometry_dash.png" style="height:90px; width:90px;">
                 </div>
-                <div class="title"><h2>⬛ Geometry Dash</h2><div class="tag">Runner</div></div>
-                <div class="desc">Auto-runner: sautez pour éviter les obstacles. Contrôles: Espace / clic / tactile.</div>
+                <div class="title">
+                    <h2>⬛ Geometry Dash</h2>
+                    <div class="tag">Runner</div>
+                </div>
+                <div class="desc">Auto-runner: sautez pour éviter les obstacles. Contrôles: Espace / clic / tactile.
+                </div>
             </div>
 
             <!-- Tic Tac Toe -->
@@ -274,7 +569,10 @@
                 <div class="thumb" aria-hidden="true">
                     <img src="images/tictactoe.png" style="height:90px; width:90px;">
                 </div>
-                <div class="title"><h2>🔲 Tic Tac Toe</h2><div class="tag">Puzzle</div></div>
+                <div class="title">
+                    <h2>🔲 Tic Tac Toe</h2>
+                    <div class="tag">Puzzle</div>
+                </div>
                 <div class="desc">Deux joueurs en local — alignez trois symboles pour gagner.</div>
             </div>
 
@@ -283,8 +581,12 @@
                 <div class="thumb" aria-hidden="true">
                     <img src="images/battle_royal.png" style="height:90px; width:90px;">
                 </div>
-                <div class="title"><h2>🏕️ Battle Royale (mini)</h2><div class="tag">Shooter</div></div>
-                <div class="desc">Simple Battle Royale: déplacez-vous (WASD), visez avec la souris, cliquez pour tirer. Dernier survivant gagne.</div>
+                <div class="title">
+                    <h2>🏕️ Battle Royale (mini)</h2>
+                    <div class="tag">Shooter</div>
+                </div>
+                <div class="desc">Simple Battle Royale: déplacez-vous (WASD), visez avec la souris, cliquez pour tirer.
+                    Dernier survivant gagne.</div>
             </div>
 
             <!-- Cookie Clicker -->
@@ -292,77 +594,94 @@
                 <div class="thumb" aria-hidden="true">
                     <img src="images/cookie.png" style="height:90px; width:90px;">
                 </div>
-                <div class="title"><h2>Cookie Clicker 🍪 (mini)</h2><div class="tag">Clicker</div></div>
-                <div class="desc"></div>
+                <div class="title">
+                    <h2>Cookie Clicker 🍪 (mini)</h2>
+                    <div class="tag">Clicker</div>
+                </div>
+                <div class="desc">Cliquez sur les cookies pour les collecter et les transformer en cookies meilleurs.</div>
+            </div>
+
+            <!-- Diep.io -->
+            <div class="card" data-title="Diep.io" onclick="location.href='./html/diep-io.html'">
+                <div class="thumb" aria-hidden="true">
+                    <img src="images/diep.png" style="height:90px; width:90px;">
+                </div>
+                <div class="title">
+                    <h2>Diep.io</h2>
+                    <div class="tag">Shooter</div>
+                </div>
+                <div class="desc">Simple Shooter: déplacez-vous (WASD), visez avec la souris, cliquez pour tirer.</div>
             </div>
 
         </div>
     </main>
- 
+
     <footer>Astuce: utilisez la barre de recherche pour filtrer vos jeux. Cliquez sur une carte pour lancer.</footer>
- 
+
     <div id="gameModal" role="dialog" aria-modal="true" aria-hidden="true">
         <div class="modal-content">
             <button class="modal-close" aria-label="Fermer" onclick="closeGameModal()">✕</button>
-            <iframe id="gameFrame" src="about:blank" title="Game iframe" allowfullscreen sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+            <iframe id="gameFrame" src="about:blank" title="Game iframe" allowfullscreen
+                sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
         </div>
     </div>
- 
+
     <script>
         // keep existing pong chooser but localized and slightly improved
-        function escolherPong(){
+        function escolherPong() {
             const modo = prompt("Choisissez le mode:\n1 = Contre IA\n2 = Deux joueurs");
-            if(modo === "1"){
+            if (modo === "1") {
                 window.location.href = "html/pong.html?modo=ai";
-            } else if(modo === "2"){
+            } else if (modo === "2") {
                 window.location.href = "html/pong.html?modo=2p";
             }
         }
 
         // Slither chooser
-        function escolherSlither(){
+        function escolherSlither() {
             const modo = prompt("Choisissez le mode:\n1 = Contre IA\n2 = Deux joueurs");
-            if(modo === "1"){
+            if (modo === "1") {
                 window.location.href = "html/slither.html?modo=ai";
-            } else if(modo === "2"){
+            } else if (modo === "2") {
                 window.location.href = "html/slither.html?modo=2p";
             }
         }
- 
+
         // Search/filter functionality
         const search = document.getElementById('search');
         const cards = Array.from(document.querySelectorAll('.card'));
-        search.addEventListener('input', (e)=>{
+        search.addEventListener('input', (e) => {
             const q = e.target.value.trim().toLowerCase();
-            cards.forEach(c=>{
+            cards.forEach(c => {
                 const t = c.dataset.title.toLowerCase();
                 c.style.display = t.includes(q) ? '' : 'none';
             });
         });
- 
+
         // simple sort (toggle alphabetical)
         const sortBtn = document.getElementById('sortBtn');
         let asc = true;
-        sortBtn.addEventListener('click', ()=>{
+        sortBtn.addEventListener('click', () => {
             const grid = document.getElementById('games');
-            const items = Array.from(grid.children).sort((a,b)=>{
+            const items = Array.from(grid.children).sort((a, b) => {
                 const A = a.dataset.title.toLowerCase();
                 const B = b.dataset.title.toLowerCase();
                 return asc ? A.localeCompare(B) : B.localeCompare(A);
             });
-            items.forEach(i=>grid.appendChild(i));
+            items.forEach(i => grid.appendChild(i));
             asc = !asc;
             sortBtn.textContent = asc ? 'Trier' : 'Trier (Z→A)';
         });
- 
+
         // dark mode persist
         const DARK_KEY = 'hub_dark_v1';
-        function setDark(enabled){ if(enabled) document.body.classList.add('dark'); else document.body.classList.remove('dark'); localStorage.setItem(DARK_KEY, enabled ? '1' : '0'); }
-        (function(){ const dark = localStorage.getItem(DARK_KEY) === '1'; setDark(dark); document.getElementById('darkToggle').textContent = document.body.classList.contains('dark') ? '☀️' : '🌙'; })();
-        document.getElementById('darkToggle').addEventListener('click', ()=>{ const enabled = !document.body.classList.contains('dark'); setDark(enabled); document.getElementById('darkToggle').textContent = enabled ? '☀️' : '🌙'; });
- 
+        function setDark(enabled) { if (enabled) document.body.classList.add('dark'); else document.body.classList.remove('dark'); localStorage.setItem(DARK_KEY, enabled ? '1' : '0'); }
+        (function () { const dark = localStorage.getItem(DARK_KEY) === '1'; setDark(dark); document.getElementById('darkToggle').textContent = document.body.classList.contains('dark') ? '☀️' : '🌙'; })();
+        document.getElementById('darkToggle').addEventListener('click', () => { const enabled = !document.body.classList.contains('dark'); setDark(enabled); document.getElementById('darkToggle').textContent = enabled ? '☀️' : '🌙'; });
+
         // helper to close modal (left as utility)
-        function closeGameModal(){ document.getElementById('gameModal').style.display = 'none'; document.getElementById('gameFrame').src = 'about:blank'; }
+        function closeGameModal() { document.getElementById('gameModal').style.display = 'none'; document.getElementById('gameFrame').src = 'about:blank'; }
     </script>
 </body>
+
 </html>
