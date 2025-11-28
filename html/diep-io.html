@@ -256,4 +256,997 @@
         }
 
         #classTreeModal h2 {
+            color: #00b2e1;
+            margin-bottom: 20px;
+            font-size: 32px;
+        }
+
+        .tree-tier {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 40px;
+            width: 100%;
+        }
+
+        .tree-tier-title {
+            width: 100%;
+            text-align: center;
+            color: #aaa;
+            font-size: 20px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 5px;
+        }
+
+        .tree-node {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid #555;
+            min-width: 100px;
+            position: relative;
+            z-index: 2;
+            background: #333;
+            /* Solid background to hide lines behind */
+        }
+
+        .tree-node-name {
+            color: white;
+            margin-top: 5px;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        /* Hierarchical Tree CSS */
+        .tree-branch {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0 10px;
+        }
+
+        .tree-children {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+            position: relative;
+            padding-top: 20px;
+            border-top: 2px solid #555;
+        }
+
+        /* Connectors */
+        .tree-children::before {
+            content: '';
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            width: 2px;
+            height: 20px;
+            background: #555;
+        }
+
+        /* Hide top border for single child to avoid ugly lines if needed, 
+           but for now simple border-top on container works for branching. 
+           We need a vertical line from parent to children container. */
+
+        #treeHint {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 12px;
+            pointer-events: none;
+        }
+
+        #deathScreen,
+        #pauseMenu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 200;
+            pointer-events: auto;
+        }
+
+        #deathScreen.show,
+        #pauseMenu.show {
+            display: flex;
+        }
+
+        #deathScreen h1 {
+            color: #ff4444;
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        #pauseMenu h1 {
+            color: #00b2e1;
+            font-size: 56px;
+            margin-bottom: 40px;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+        }
+
+        #deathScreen p,
+        #pauseMenu p {
+            color: white;
+            font-size: 24px;
+            margin: 10px 0;
+        }
+
+        .menu-btn {
+            margin: 15px 0;
+            padding: 18px 60px;
+            font-size: 22px;
+            background: #00b2e1;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            min-width: 300px;
+            font-weight: bold;
+        }
+
+        .menu-btn:hover {
+            background: #0088ff;
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 178, 225, 0.4);
+        }
+
+        .menu-btn.secondary {
+            background: #555;
+        }
+
+        .menu-btn.secondary:hover {
+            background: #666;
+            box-shadow: 0 5px 15px rgba(255, 255, 255, 0.2);
+        }
+
+        .damage-number {
+            position: absolute;
+            color: #ff6b6b;
+            font-weight: bold;
+            font-size: 20px;
+            pointer-events: none;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            animation: floatUp 1s ease-out forwards;
+        }
+
+        @keyframes floatUp {
+            0% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            100% {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="ui">
+        <div id="stats">
+            <h2>Tank Stats</h2>
+            <div class="stat-row"><span class="stat-label">Niveau:</span><span class="stat-value"
+                    id="levelDisplay">1</span></div>
+            <div class="stat-row"><span class="stat-label">Score:</span><span class="stat-value"
+                    id="scoreDisplay">0</span></div>
+            <div class="stat-row"><span class="stat-label">Kills:</span><span class="stat-value"
+                    id="killsDisplay">0</span></div>
+        </div>
+        <div id="levelBar">
+            <div id="levelProgress"></div>
+            <div id="levelText">Niveau 1 - 0/100 XP</div>
+        </div>
+        <div id="upgradePanel">
+            <div id="skillPoints">Points: 0</div>
+            <h3>Améliorations</h3>
+            <div class="upgrade-item" data-stat="healthRegen"><span class="upgrade-name">Régén. Vie</span>
+                <div class="upgrade-level">
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                </div>
+            </div>
+            <div class="upgrade-item" data-stat="maxHealth"><span class="upgrade-name">Vie Max</span>
+                <div class="upgrade-level">
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                </div>
+            </div>
+            <div class="upgrade-item" data-stat="bodyDamage"><span class="upgrade-name">Dégâts Corps</span>
+                <div class="upgrade-level">
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                </div>
+            </div>
+            <div class="upgrade-item" data-stat="bulletSpeed"><span class="upgrade-name">Vitesse Balle</span>
+                <div class="upgrade-level">
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                </div>
+            </div>
+            <div class="upgrade-item" data-stat="bulletPenetration"><span class="upgrade-name">Pénétration</span>
+                <div class="upgrade-level">
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                </div>
+            </div>
+            <div class="upgrade-item" data-stat="bulletDamage"><span class="upgrade-name">Dégâts Balle</span>
+                <div class="upgrade-level">
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                </div>
+            </div>
+            <div class="upgrade-item" data-stat="reload"><span class="upgrade-name">Rechargement</span>
+                <div class="upgrade-level">
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                </div>
+            </div>
+            <div class="upgrade-item" data-stat="movementSpeed"><span class="upgrade-name">Vitesse</span>
+                <div class="upgrade-level">
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                    <div class="upgrade-dot"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="classSelector">
+        <h3>Choisir une Classe</h3>
+        <div id="classOptions"></div>
+    </div>
+
+    <div id="classTreeModal">
+        <h2>Arbre des Classes</h2>
+        <div id="treeContent"></div>
+        <button class="menu-btn secondary"
+            onclick="document.getElementById('classTreeModal').style.display='none'">FERMER</button>
+    </div>
+    <div id="treeHint">Appuyez sur 'Y' pour voir l'arbre des classes</div>
+
+    <div id="pauseMenu">
+        <h1>PAUSE</h1>
+        <button class="menu-btn" id="resumeBtn">CONTINUER</button>
+        <button class="menu-btn secondary" id="backToHubBtn">RETOUR AU HUB</button>
+    </div>
+
+    <div id="deathScreen">
+        <h1>VOUS ÊTES MORT</h1>
+        <p>Score Final: <span id="finalScore">0</span></p>
+        <p>Niveau Atteint: <span id="finalLevel">1</span></p>
+        <p>Kills: <span id="finalKills">0</span></p>
+        <button class="menu-btn" id="respawnBtn">RÉAPPARAÎTRE</button>
+        <button class="menu-btn secondary" id="deathBackToHubBtn">RETOUR AU HUB</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        resizeCanvas(); window.addEventListener('resize', resizeCanvas);
+
+        const WORLD_SIZE = 4000;
+        const GRID_SIZE = 50;
+        let isPaused = false;
+
+        // --- TANK CLASSES DEFINITION ---
+        const tankClasses = {
+            basic: { name: 'Basic', upgrades: ['twin', 'sniper', 'machinegun', 'flank'], tier: 0 },
+            // Tier 1 (Lvl 5)
+            twin: { name: 'Twin', upgrades: ['tripleshot', 'quadtank', 'twinflank'], tier: 1 },
+            sniper: { name: 'Sniper', upgrades: ['assassin', 'hunter', 'trapper'], tier: 1 },
+            machinegun: { name: 'Machine Gun', upgrades: ['destroyer', 'gunner', 'sprayer'], tier: 1 },
+            flank: { name: 'Flank Guard', upgrades: ['quadtank', 'triangle', 'auto3'], tier: 1 },
+            // Tier 2 (Lvl 10)
+            tripleshot: { name: 'Triple Shot', upgrades: ['triplet', 'pentashot', 'spreadshot'], tier: 2 },
+            quadtank: { name: 'Quad Tank', upgrades: ['octo', 'auto5'], tier: 2 },
+            twinflank: { name: 'Twin Flank', upgrades: ['tripletwin', 'battleship'], tier: 2 },
+            assassin: { name: 'Assassin', upgrades: ['ranger', 'stalker'], tier: 2 },
+            hunter: { name: 'Hunter', upgrades: ['predator', 'streamliner'], tier: 2 },
+            trapper: { name: 'Trapper', upgrades: ['triTrapper', 'gunnertrapper'], tier: 2 },
+            destroyer: { name: 'Destroyer', upgrades: ['hybrid', 'annihilator'], tier: 2 },
+            gunner: { name: 'Gunner', upgrades: ['autogunner', 'streamliner'], tier: 2 },
+            sprayer: { name: 'Sprayer', upgrades: [], tier: 2 },
+            triangle: { name: 'Tri-Angle', upgrades: ['booster', 'fighter'], tier: 2 },
+            auto3: { name: 'Auto 3', upgrades: ['auto5', 'autogunner'], tier: 2 },
+            // Tier 3 (Lvl 15+) - Final Classes
+            triplet: { name: 'Triplet', upgrades: [], tier: 3 },
+            pentashot: { name: 'Penta Shot', upgrades: [], tier: 3 },
+            spreadshot: { name: 'Spread Shot', upgrades: [], tier: 3 },
+            octo: { name: 'Octo Tank', upgrades: [], tier: 3 },
+            auto5: { name: 'Auto 5', upgrades: [], tier: 3 },
+            tripletwin: { name: 'Triple Twin', upgrades: [], tier: 3 },
+            battleship: { name: 'Battleship', upgrades: [], tier: 3 },
+            ranger: { name: 'Ranger', upgrades: [], tier: 3 },
+            stalker: { name: 'Stalker', upgrades: [], tier: 3 },
+            predator: { name: 'Predator', upgrades: [], tier: 3 },
+            streamliner: { name: 'Streamliner', upgrades: [], tier: 3 },
+            triTrapper: { name: 'triTrapper', upgrades: [], tier: 3 },
+            gunnertrapper: { name: 'Gunner Trapper', upgrades: [], tier: 3 },
+            hybrid: { name: 'Hybrid', upgrades: [], tier: 3 },
+            annihilator: { name: 'Annihilator', upgrades: [], tier: 3 },
+            autogunner: { name: 'Auto Gunner', upgrades: [], tier: 3 },
+            booster: { name: 'Booster', upgrades: [], tier: 3 },
+            fighter: { name: 'Fighter', upgrades: [], tier: 3 }
+        };
+
+        const player = {
+            x: WORLD_SIZE / 2, y: WORLD_SIZE / 2, size: 25, angle: 0,
+            health: 100, maxHealth: 100, score: 0, level: 1, xp: 0, xpToNextLevel: 100,
+            kills: 0, skillPoints: 0, tankClass: 'basic', tier: 0, ignoreInputs: false,
+            stats: { healthRegen: 0, maxHealth: 0, bodyDamage: 0, bulletSpeed: 0, bulletPenetration: 0, bulletDamage: 0, reload: 0, movementSpeed: 0 },
+            isDead: false
+        };
+
+        const camera = { x: player.x, y: player.y };
+        const keys = {};
+        const mouse = { x: 0, y: 0, worldX: 0, worldY: 0, down: false };
+        let bullets = [];
+        let shapes = [];
+        let bots = [];
+        let lastShootTime = 0;
+
+        // --- HELPERS FOR DRAWING AND SHOOTING ---
+        function getTankCannons(className, size) {
+            const c = [];
+            const add = (x, y, w, h, r = 0) => c.push({ x, y, w, h, rotate: r });
+            switch (className) {
+                case 'basic': add(0, 0, size * 1.5, size * 0.6); break;
+                case 'twin': add(0, -size * 0.25, size * 1.5, size * 0.4); add(0, size * 0.25, size * 1.5, size * 0.4); break;
+                case 'sniper': add(0, 0, size * 2.2, size * 0.5); break;
+                case 'machinegun': add(0, 0, size * 1.3, size * 0.7); add(size * 0.5, 0, size * 1.0, size * 0.9); break;
+                case 'flank': add(0, 0, size * 1.5, size * 0.6); add(-size * 0.5, 0, size * 1.2, size * 0.6, Math.PI); break;
+                case 'tripleshot': add(0, 0, size * 1.5, size * 0.5); add(0, 0, size * 1.5, size * 0.5, Math.PI / 4); add(0, 0, size * 1.5, size * 0.5, -Math.PI / 4); break;
+                case 'quadtank': for (let i = 0; i < 4; i++) add(0, 0, size * 1.5, size * 0.5, i * Math.PI / 2); break;
+                case 'twinflank': add(0, -size * 0.25, size * 1.5, size * 0.4); add(0, size * 0.25, size * 1.5, size * 0.4); add(0, -size * 0.25, size * 1.5, size * 0.4, Math.PI); add(0, size * 0.25, size * 1.5, size * 0.4, Math.PI); break;
+                case 'assassin': add(0, 0, size * 2.5, size * 0.5); break;
+                case 'hunter': add(0, 0, size * 2.2, size * 0.5); add(0, 0, size * 1.8, size * 0.7); break;
+                case 'destroyer': add(0, 0, size * 1.8, size * 1.2); break;
+                case 'gunner': add(0, -size * 0.3, size * 1.2, size * 0.25); add(0, -size * 0.1, size * 1.4, size * 0.25); add(0, size * 0.1, size * 1.4, size * 0.25); add(0, size * 0.3, size * 1.2, size * 0.25); break;
+                case 'triangle': add(0, 0, size * 1.6, size * 0.6); add(0, 0, size * 1.4, size * 0.6, Math.PI * 0.8); add(0, 0, size * 1.4, size * 0.6, -Math.PI * 0.8); break;
+                case 'triplet': add(0, 0, size * 1.6, size * 0.5); add(0, -size * 0.3, size * 1.4, size * 0.4); add(0, size * 0.3, size * 1.4, size * 0.4); break;
+                case 'pentashot': add(0, 0, size * 1.6, size * 0.5); add(0, 0, size * 1.5, size * 0.5, 0.2); add(0, 0, size * 1.5, size * 0.5, -0.2); add(0, 0, size * 1.3, size * 0.5, 0.4); add(0, 0, size * 1.3, size * 0.5, -0.4); break;
+                case 'spreadshot': add(0, 0, size * 1.6, size * 0.6); for (let i = 1; i <= 5; i++) { add(0, 0, size * (1.5 - i * 0.1), size * 0.3, i * 0.15); add(0, 0, size * (1.5 - i * 0.1), size * 0.3, -i * 0.15); } break;
+                case 'octo': for (let i = 0; i < 8; i++) add(0, 0, size * 1.5, size * 0.5, i * Math.PI / 4); break;
+                case 'ranger': add(0, 0, size * 3.0, size * 0.5); add(0, 0, size * 2.0, size * 0.8); break;
+                case 'booster': add(0, 0, size * 1.6, size * 0.6); add(0, 0, size * 1.4, size * 0.5, Math.PI * 0.75); add(0, 0, size * 1.4, size * 0.5, -Math.PI * 0.75); add(0, 0, size * 1.2, size * 0.4, Math.PI * 0.85); add(0, 0, size * 1.2, size * 0.4, -Math.PI * 0.85); break;
+                case 'fighter': add(0, 0, size * 1.6, size * 0.6); add(0, 0, size * 1.4, size * 0.5, Math.PI / 2); add(0, 0, size * 1.4, size * 0.5, -Math.PI / 2); add(0, 0, size * 1.2, size * 0.4, Math.PI * 0.8); add(0, 0, size * 1.2, size * 0.4, -Math.PI * 0.8); break;
+                case 'hybrid': add(0, 0, size * 1.8, size * 1.2); add(-size * 1.0, 0, size * 1.0, size * 1.0, Math.PI); break;
+                default: add(0, 0, size * 1.5, size * 0.6); break;
+            }
+            return c;
+        }
+
+        function getTankPattern(className) {
+            const p = [];
+            const add = (a, o, dm = 1, sm = 1, spm = 1, r = 0) => p.push({ angle: a, offset: o, damageMult: dm, sizeMult: sm, speedMult: spm, recoil: r });
+            switch (className) {
+                case 'basic': add(0, 0); break;
+                case 'twin': add(0, -5); add(0, 5); break;
+                case 'sniper': add(0, 0, 1.5, 1, 1.5); break;
+                case 'machinegun': add(0, 0, 1, 1, 1, 0); break; // Spread logic in loop
+                case 'flank': add(0, 0); add(Math.PI, 0); break;
+                case 'tripleshot': add(0, 0); add(Math.PI / 4, 0); add(-Math.PI / 4, 0); break;
+                case 'quadtank': for (let i = 0; i < 4; i++) add(i * Math.PI / 2, 0); break;
+                case 'twinflank': add(0, -5); add(0, 5); add(Math.PI, -5); add(Math.PI, 5); break;
+                case 'assassin': add(0, 0, 2.0, 1, 1.8); break;
+                case 'hunter': add(0, 0, 0.7, 1, 1.5); add(0, 0, 0.7, 1, 1.4); break;
+                case 'destroyer': add(0, 0, 4.0, 2.0, 0.8, 5); break;
+                case 'gunner': add(0, -6, 0.5, 0.6); add(0, -2, 0.5, 0.6); add(0, 2, 0.5, 0.6); add(0, 6, 0.5, 0.6); break;
+                case 'triangle': add(0, 0); add(Math.PI * 0.8, 0, 1, 1, 1, 2); add(-Math.PI * 0.8, 0, 1, 1, 1, 2); break;
+                case 'triplet': add(0, 0); add(0, -5, 0.6); add(0, 5, 0.6); break;
+                case 'pentashot': add(0, 0); add(0.2, 0); add(-0.2, 0); add(0.4, 0); add(-0.4, 0); break;
+                case 'spreadshot': for (let i = -5; i <= 5; i++) add(i * 0.15, 0, 1, i === 0 ? 1 : 0.6); break;
+                case 'octo': for (let i = 0; i < 8; i++) add(i * Math.PI / 4, 0); break;
+                case 'ranger': add(0, 0, 2.5, 1, 2.0); break;
+                case 'booster': add(0, 0); add(Math.PI * 0.75, 0, 1, 1, 1, 3); add(-Math.PI * 0.75, 0, 1, 1, 1, 3); add(Math.PI * 0.85, 0, 1, 1, 1, 3); add(-Math.PI * 0.85, 0, 1, 1, 1, 3); break;
+                case 'fighter': add(0, 0); add(Math.PI / 2, 0); add(-Math.PI / 2, 0); add(Math.PI * 0.8, 0, 1, 1, 1, 2); add(-Math.PI * 0.8, 0, 1, 1, 1, 2); break;
+                case 'hybrid': add(0, 0, 4.0, 2.0, 0.8, 5); break;
+                default: add(0, 0); break;
+            }
+            return p;
+        }
+
+        function initShapes() {
+            shapes = [];
+            const shapeTypes = [
+                { sides: 3, size: 15, color: '#fc7677', health: 10, xp: 10, score: 10, priority: 1 },
+                { sides: 4, size: 20, color: '#ffe869', health: 20, xp: 25, score: 25, priority: 2 },
+                { sides: 5, size: 25, color: '#768dfc', health: 100, xp: 130, score: 130, priority: 3 }
+            ];
+            for (let i = 0; i < 150; i++) {
+                const type = shapeTypes[Math.floor(Math.random() * shapeTypes.length)];
+                shapes.push({
+                    x: Math.random() * WORLD_SIZE, y: Math.random() * WORLD_SIZE, ...type,
+                    maxHealth: type.health, angle: Math.random() * Math.PI * 2, rotationSpeed: (Math.random() - 0.5) * 0.02
+                });
+            }
+        }
+
+        function spawnBot(bot) {
+            bot.x = Math.random() * WORLD_SIZE;
+            bot.y = Math.random() * WORLD_SIZE;
+            bot.angle = Math.random() * Math.PI * 2;
+            bot.isDead = false;
+            bot.target = null;
+            bot.state = 'hunting';
+            bot.stateTimer = 0;
+            bot.lastShootTime = 0;
+
+            // Random level 1-45
+            bot.level = Math.floor(Math.random() * 45) + 1;
+            bot.xp = 0;
+            bot.xpToNextLevel = 100 * Math.pow(1.2, bot.level - 1);
+
+            // Reset stats
+            bot.stats = { healthRegen: 0, maxHealth: 0, bodyDamage: 0, bulletSpeed: 0, bulletPenetration: 0, bulletDamage: 0, reload: 0, movementSpeed: 0 };
+
+            // Distribute skill points
+            let points = bot.level - 1;
+            const statKeys = Object.keys(bot.stats);
+            while (points > 0) {
+                const s = statKeys[Math.floor(Math.random() * statKeys.length)];
+                if (bot.stats[s] < 7) {
+                    bot.stats[s]++;
+                    points--;
+                }
+            }
+
+            // Set Max Health
+            bot.maxHealth = 100 + bot.stats.maxHealth * 20;
+            bot.health = bot.maxHealth;
+
+            // Determine Class
+            bot.tankClass = 'basic';
+
+            // Upgrade to Tier 1 (Level 15+)
+            if (bot.level >= 15) {
+                const t1 = tankClasses['basic'].upgrades;
+                if (t1 && t1.length) bot.tankClass = t1[Math.floor(Math.random() * t1.length)];
+            }
+            // Upgrade to Tier 2 (Level 30+)
+            if (bot.level >= 30) {
+                const current = tankClasses[bot.tankClass];
+                if (current && current.upgrades && current.upgrades.length) {
+                    bot.tankClass = current.upgrades[Math.floor(Math.random() * current.upgrades.length)];
+                }
+            }
+            // Upgrade to Tier 3 (Level 45+)
+            if (bot.level >= 45) {
+                const current = tankClasses[bot.tankClass];
+                if (current && current.upgrades && current.upgrades.length) {
+                    bot.tankClass = current.upgrades[Math.floor(Math.random() * current.upgrades.length)];
+                }
+            }
+        }
+
+        function initBots() {
+            bots = [];
+            const botNames = ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'Zeta', 'Theta', 'Omega', 'Hunter', 'Sniper', 'Tank', 'Warrior'];
+            for (let i = 0; i < 15; i++) {
+                const bot = {
+                    color: '#ff6b6b',
+                    name: botNames[i % botNames.length],
+                    score: 0,
+                    kills: 0,
+                    size: 25
+                };
+                spawnBot(bot);
+                bots.push(bot);
+            }
+        }
+
+        function botLevelUp(bot) {
+            while (bot.xp >= bot.xpToNextLevel) {
+                bot.xp -= bot.xpToNextLevel;
+                bot.level++;
+                bot.xpToNextLevel = Math.floor(bot.xpToNextLevel * 1.2);
+                const stats = Object.keys(bot.stats);
+                const s = stats[Math.floor(Math.random() * stats.length)];
+                if (bot.stats[s] < 7) bot.stats[s]++;
+
+                // Bot upgrades
+                if (bot.level % 5 === 0) {
+                    const def = tankClasses[bot.tankClass];
+                    if (def && def.upgrades.length > 0) {
+                        bot.tankClass = def.upgrades[Math.floor(Math.random() * def.upgrades.length)];
+                    }
+                }
+            }
+        }
+
+        function updateBotAI(bot, deltaTime) {
+            if (bot.isDead) return;
+            bot.stateTimer -= deltaTime;
+
+            // Simple AI
+            let target = null;
+            let minDist = Infinity;
+
+            // Look for shapes
+            shapes.forEach(s => {
+                const d = Math.hypot(bot.x - s.x, bot.y - s.y);
+                if (d < 500 && d < minDist) { minDist = d; target = s; }
+            });
+
+            // Look for player
+            const dPlayer = Math.hypot(bot.x - player.x, bot.y - player.y);
+            if (dPlayer < 400 && !player.isDead) { target = player; minDist = dPlayer; }
+
+            if (target) {
+                const angle = Math.atan2(target.y - bot.y, target.x - bot.x);
+                bot.angle = angle;
+                const speed = 2 + bot.stats.movementSpeed * 0.3;
+                if (minDist > 200) {
+                    bot.x += Math.cos(angle) * speed;
+                    bot.y += Math.sin(angle) * speed;
+                }
+
+                // Shoot
+                const now = Date.now();
+                if (now - bot.lastShootTime > Math.max(200, 500 - bot.stats.reload * 40)) {
+                    shootBullet(bot, true);
+                    bot.lastShootTime = now;
+                }
+            }
+
+            bot.x = Math.max(bot.size, Math.min(WORLD_SIZE - bot.size, bot.x));
+            bot.y = Math.max(bot.size, Math.min(WORLD_SIZE - bot.size, bot.y));
+        }
+
+        function shootBullet(entity, isBot = false) {
+            const speed = 8 + entity.stats.bulletSpeed * 1.5;
+            const damage = 10 + entity.stats.bulletDamage * 5;
+            const penetration = 1 + entity.stats.bulletPenetration * 0.5;
+            const patterns = getTankPattern(entity.tankClass);
+
+            patterns.forEach(p => {
+                const finalAngle = entity.angle + p.angle + (entity.tankClass === 'machinegun' ? (Math.random() - 0.5) * 0.3 : 0);
+                const offsetX = Math.cos(entity.angle + Math.PI / 2) * p.offset;
+                const offsetY = Math.sin(entity.angle + Math.PI / 2) * p.offset;
+
+                bullets.push({
+                    x: entity.x + Math.cos(finalAngle) * entity.size * 1.5 + offsetX,
+                    y: entity.y + Math.sin(finalAngle) * entity.size * 1.5 + offsetY,
+                    vx: Math.cos(finalAngle) * speed * (p.speedMult || 1),
+                    vy: Math.sin(finalAngle) * speed * (p.speedMult || 1),
+                    size: (entity.tankClass.includes('sniper') ? 6 : 8) * (p.sizeMult || 1),
+                    damage: damage * (p.damageMult || 1),
+                    penetration: penetration,
+                    life: 100,
+                    owner: entity,
+                    isBot: isBot
+                });
+
+                if (p.recoil && !isBot) {
+                    entity.x -= Math.cos(finalAngle) * p.recoil;
+                    entity.y -= Math.sin(finalAngle) * p.recoil;
+                }
+            });
+        }
+
+        function drawTank(entity, color, name = null) {
+            const screenX = entity.x - camera.x + canvas.width / 2;
+            const screenY = entity.y - camera.y + canvas.height / 2;
+            ctx.save();
+            ctx.translate(screenX, screenY);
+            ctx.rotate(entity.angle);
+
+            const cannons = getTankCannons(entity.tankClass, entity.size);
+            cannons.forEach(c => {
+                ctx.save();
+                if (c.rotate) ctx.rotate(c.rotate);
+                ctx.fillStyle = '#999';
+                ctx.fillRect(c.x, c.y - c.h / 2, c.w, c.h);
+                ctx.strokeStyle = '#555';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(c.x, c.y - c.h / 2, c.w, c.h);
+                ctx.restore();
+            });
+
+            ctx.beginPath();
+            ctx.arc(0, 0, entity.size, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.restore();
+
+            if (name) {
+                ctx.fillStyle = 'white'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center';
+                ctx.fillText(name, screenX, screenY - entity.size - 25);
+            }
+
+            const barWidth = entity.size * 2;
+            const barY = screenY - entity.size - 15;
+            ctx.fillStyle = '#333'; ctx.fillRect(screenX - barWidth / 2, barY, barWidth, 5);
+            ctx.fillStyle = '#4CAF50'; ctx.fillRect(screenX - barWidth / 2, barY, barWidth * (entity.health / entity.maxHealth), 5);
+        }
+
+        function checkLevelUp() {
+            while (player.xp >= player.xpToNextLevel) {
+                player.xp -= player.xpToNextLevel;
+                player.level++;
+                player.skillPoints++;
+                player.xpToNextLevel = Math.floor(player.xpToNextLevel * 1.2);
+                updateUpgradeUI();
+
+                if (player.level % 5 === 0) {
+                    const def = tankClasses[player.tankClass];
+                    if (def && def.upgrades.length > 0) {
+                        showClassSelection(def.upgrades);
+                    }
+                }
+            }
+        }
+
+        function showClassSelection(upgrades) {
+            const selector = document.getElementById('classSelector');
+            const options = document.getElementById('classOptions');
+            options.innerHTML = '';
+
+            upgrades.forEach(cls => {
+                const def = tankClasses[cls];
+                if (!def) return;
+                const card = document.createElement('div');
+                card.className = 'class-card';
+                card.innerHTML = `<div class="class-name">${def.name}</div>`;
+                card.onclick = () => {
+                    player.tankClass = cls;
+                    player.tier++;
+                    selector.style.display = 'none';
+                    player.ignoreInputs = false;
+                };
+
+                // Mini preview
+                const cvs = document.createElement('canvas');
+                cvs.width = 50; cvs.height = 50;
+                const c = cvs.getContext('2d');
+                c.translate(25, 25); c.scale(0.5, 0.5);
+                const cannons = getTankCannons(cls, 25);
+                cannons.forEach(cn => {
+                    c.save(); if (cn.rotate) c.rotate(cn.rotate);
+                    c.fillStyle = '#999'; c.fillRect(cn.x, cn.y - cn.h / 2, cn.w, cn.h);
+                    c.strokeRect(cn.x, cn.y - cn.h / 2, cn.w, cn.h); c.restore();
+                });
+                c.beginPath(); c.arc(0, 0, 25, 0, Math.PI * 2); c.fillStyle = '#00b2e1'; c.fill(); c.stroke();
+                card.insertBefore(cvs, card.firstChild);
+
+                options.appendChild(card);
+            });
+
+            selector.style.display = 'flex';
+            player.ignoreInputs = true;
+        }
+
+        function updateUpgradeUI() {
+            document.getElementById('skillPoints').textContent = `Points: ${player.skillPoints}`;
+            document.querySelectorAll('.upgrade-item').forEach(item => {
+                const stat = item.dataset.stat;
+                const level = player.stats[stat];
+                const dots = item.querySelectorAll('.upgrade-dot');
+                dots.forEach((dot, i) => {
+                    if (i < level) dot.classList.add('filled');
+                    else dot.classList.remove('filled');
+                });
+                if (level >= 7) item.classList.add('maxed');
+            });
+        }
+
+        document.querySelectorAll('.upgrade-item').forEach(item => {
+            item.addEventListener('click', () => {
+                if (player.isDead || isPaused || player.ignoreInputs) return;
+                const stat = item.dataset.stat;
+                if (player.stats[stat] < 7 && player.skillPoints > 0) {
+                    player.stats[stat]++;
+                    player.skillPoints--;
+                    updateUpgradeUI();
+                    if (stat === 'maxHealth') {
+                        player.maxHealth = 100 + player.stats.maxHealth * 20;
+                        player.health = Math.min(player.health + 20, player.maxHealth);
+                    }
+                }
+            });
+        });
+
+        function update(deltaTime) {
+            if (player.isDead || isPaused) return;
+
+            const speed = 3 + player.stats.movementSpeed * 0.5;
+            let dx = 0, dy = 0;
+            if (keys['w'] || keys['arrowup']) dy -= speed;
+            if (keys['s'] || keys['arrowdown']) dy += speed;
+            if (keys['a'] || keys['arrowleft']) dx -= speed;
+            if (keys['d'] || keys['arrowright']) dx += speed;
+
+            if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
+            player.x += dx; player.y += dy;
+            player.x = Math.max(player.size, Math.min(WORLD_SIZE - player.size, player.x));
+            player.y = Math.max(player.size, Math.min(WORLD_SIZE - player.size, player.y));
+            player.angle = Math.atan2(mouse.worldY - player.y, mouse.worldX - player.x);
+
+            if (mouse.down && !player.ignoreInputs) {
+                const now = Date.now();
+                if (now - lastShootTime > Math.max(200, 500 - player.stats.reload * 40)) {
+                    shootBullet(player);
+                    lastShootTime = now;
+                }
+            }
+
+            camera.x = player.x; camera.y = player.y;
+
+            bots.forEach(bot => updateBotAI(bot, deltaTime));
+
+            bullets = bullets.filter(b => {
+                b.x += b.vx; b.y += b.vy; b.life--;
+                if (b.life <= 0 || b.x < 0 || b.x > WORLD_SIZE || b.y < 0 || b.y > WORLD_SIZE) return false;
+
+                // Collisions
+                for (let s of shapes) {
+                    if (Math.hypot(b.x - s.x, b.y - s.y) < b.size + s.size) {
+                        s.health -= b.damage; b.penetration--;
+                        if (s.health <= 0) {
+                            if (!b.isBot) { player.xp += s.xp; player.score += s.score; checkLevelUp(); }
+                            else { b.owner.xp += s.xp; b.owner.score += s.score; botLevelUp(b.owner); }
+                            s.x = Math.random() * WORLD_SIZE; s.y = Math.random() * WORLD_SIZE; s.health = s.maxHealth;
+                        }
+                        if (b.penetration <= 0) return false;
+                    }
+                }
+
+                if (b.isBot && !player.isDead && Math.hypot(b.x - player.x, b.y - player.y) < b.size + player.size) {
+                    player.health -= b.damage;
+                    if (player.health <= 0) {
+                        player.isDead = true;
+                        document.getElementById('finalScore').textContent = player.score;
+                        document.getElementById('finalLevel').textContent = player.level;
+                        document.getElementById('finalKills').textContent = player.kills;
+                        document.getElementById('deathScreen').classList.add('show');
+                    }
+                    return false;
+                }
+
+                for (let bot of bots) {
+                    if (!bot.isDead && bot !== b.owner && Math.hypot(b.x - bot.x, b.y - bot.y) < b.size + bot.size) {
+                        bot.health -= b.damage;
+                        if (bot.health <= 0) {
+                            bot.isDead = true;
+                            if (!b.isBot) { player.kills++; player.score += 100; player.xp += 50; checkLevelUp(); }
+                            else { b.owner.kills++; b.owner.score += 100; b.owner.xp += 50; botLevelUp(b.owner); }
+                            setTimeout(() => {
+                                spawnBot(bot);
+                            }, 5000);
+                        }
+                        return false;
+                    }
+                }
+                return true;
+            });
+
+            shapes.forEach(s => s.angle += s.rotationSpeed);
+            if (player.health < player.maxHealth) player.health += (0.1 + player.stats.healthRegen * 0.2) * deltaTime / 16;
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('levelDisplay').textContent = player.level;
+            document.getElementById('scoreDisplay').textContent = player.score.toLocaleString();
+            document.getElementById('killsDisplay').textContent = player.kills;
+            document.getElementById('levelProgress').style.width = (player.xp / player.xpToNextLevel) * 100 + '%';
+            document.getElementById('levelText').textContent = `Niveau ${player.level} - ${player.xp}/${player.xpToNextLevel} XP`;
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Grid
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)'; ctx.lineWidth = 1;
+            const startX = Math.floor(camera.x / GRID_SIZE) * GRID_SIZE;
+            const startY = Math.floor(camera.y / GRID_SIZE) * GRID_SIZE;
+            for (let x = startX - canvas.width / 2; x < startX + canvas.width * 1.5; x += GRID_SIZE) {
+                ctx.beginPath(); ctx.moveTo(x - camera.x + canvas.width / 2, 0); ctx.lineTo(x - camera.x + canvas.width / 2, canvas.height); ctx.stroke();
+            }
+            for (let y = startY - canvas.height / 2; y < startY + canvas.height * 1.5; y += GRID_SIZE) {
+                ctx.beginPath(); ctx.moveTo(0, y - camera.y + canvas.height / 2); ctx.lineTo(canvas.width, y - camera.y + canvas.height / 2); ctx.stroke();
+            }
+
+            shapes.forEach(s => {
+                const sx = s.x - camera.x + canvas.width / 2; const sy = s.y - camera.y + canvas.height / 2;
+                if (sx < -50 || sx > canvas.width + 50 || sy < -50 || sy > canvas.height + 50) return;
+                ctx.save(); ctx.translate(sx, sy); ctx.rotate(s.angle);
+                ctx.beginPath();
+                for (let i = 0; i < s.sides; i++) {
+                    const a = (Math.PI * 2 / s.sides) * i;
+                    if (i === 0) ctx.moveTo(Math.cos(a) * s.size, Math.sin(a) * s.size);
+                    else ctx.lineTo(Math.cos(a) * s.size, Math.sin(a) * s.size);
+                }
+                ctx.closePath(); ctx.fillStyle = s.color; ctx.fill(); ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.stroke();
+                ctx.restore();
+                if (s.health < s.maxHealth) {
+                    ctx.fillStyle = '#333'; ctx.fillRect(sx - s.size, sy - s.size - 10, s.size * 2, 4);
+                    ctx.fillStyle = '#4CAF50'; ctx.fillRect(sx - s.size, sy - s.size - 10, s.size * 2 * (s.health / s.maxHealth), 4);
+                }
+            });
+
+            bullets.forEach(b => {
+                const sx = b.x - camera.x + canvas.width / 2; const sy = b.y - camera.y + canvas.height / 2;
+                ctx.beginPath(); ctx.arc(sx, sy, b.size, 0, Math.PI * 2);
+                ctx.fillStyle = b.isBot ? '#ff6b6b' : '#00b2e1'; ctx.fill(); ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.stroke();
+            });
+
+            bots.forEach(b => { if (!b.isDead) drawTank(b, b.color, b.name + ' [' + b.level + ']'); });
+            if (!player.isDead) drawTank(player, '#00b2e1');
+        }
+
+        let lastTime = Date.now();
+        function gameLoop() {
+            const now = Date.now();
+            const deltaTime = now - lastTime;
+            lastTime = now;
+            update(deltaTime);
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.addEventListener('keydown', e => {
+            keys[e.key.toLowerCase()] = true;
+            if (e.key === 'Escape' && !player.isDead) {
+                isPaused = !isPaused;
+                document.getElementById('pauseMenu').classList.toggle('show', isPaused);
+            }
+            if (e.key.toLowerCase() === 'y' && !player.isDead) {
+                const modal = document.getElementById('classTreeModal');
+                if (modal.style.display === 'flex') {
+                    modal.style.display = 'none';
+                } else {
+                    renderClassTree();
+                    modal.style.display = 'flex';
+                }
+            }
+        });
+        window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+        canvas.addEventListener('mousemove', e => {
+            const r = canvas.getBoundingClientRect();
+            mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top;
+            mouse.worldX = mouse.x + camera.x - canvas.width / 2;
+            mouse.worldY = mouse.y + camera.y - canvas.height / 2;
+        });
+        canvas.addEventListener('mousedown', () => mouse.down = true);
+        canvas.addEventListener('mouseup', () => mouse.down = false);
+        document.getElementById('resumeBtn').onclick = () => { isPaused = false; document.getElementById('pauseMenu').classList.remove('show'); };
+        document.getElementById('backToHubBtn').onclick = () => window.location.href = '../index.html';
+        document.getElementById('deathBackToHubBtn').onclick = () => window.location.href = '../index.html';
+        document.getElementById('respawnBtn').onclick = () => {
+            player.x = WORLD_SIZE / 2; player.y = WORLD_SIZE / 2; player.health = 100; player.maxHealth = 100;
+            player.score = 0; player.level = 1; player.xp = 0; player.xpToNextLevel = 100; player.kills = 0;
+            player.skillPoints = 0; player.tankClass = 'basic'; player.tier = 0; player.isDead = false;
+            Object.keys(player.stats).forEach(k => player.stats[k] = 0);
+            bullets = []; initShapes(); initBots(); updateUpgradeUI(); updateUI();
+            document.getElementById('deathScreen').classList.remove('show');
+        };
+
+        function renderClassTree() {
+            const container = document.getElementById('treeContent');
+            container.innerHTML = '';
+
+            // Recursive function to build tree
+            function createTreeNode(classId) {
+                const def = tankClasses[classId];
+                if (!def) return null;
+
+                const branch = document.createElement('div');
+                branch.className = 'tree-branch';
+
+                const node = document.createElement('div');
+                node.className = 'tree-node';
+
+                // Canvas preview
+                const cvs = document.createElement('canvas');
+                cvs.width = 60; cvs.height = 60;
+                const c = cvs.getContext('2d');
+                c.translate(30, 30); c.scale(0.6, 0.6);
+                const cannons = getTankCannons(classId, 25);
+                cannons.forEach(cn => {
+                    c.save(); if (cn.rotate) c.rotate(cn.rotate);
+                    c.fillStyle = '#999'; c.fillRect(cn.x, cn.y - cn.h / 2, cn.w, cn.h);
+                    c.strokeRect(cn.x, cn.y - cn.h / 2, cn.w, cn.h); c.restore();
+                });
+                c.beginPath(); c.arc(0, 0, 25, 0, Math.PI * 2); c.fillStyle = '#00b2e1'; c.fill(); c.stroke();
+
+                node.appendChild(cvs);
+
+                const name = document.createElement('div');
+                name.className = 'tree-node-name';
+                name.textContent = def.name;
+                node.appendChild(name);
+
+                branch.appendChild(node);
+
+                if (def.upgrades && def.upgrades.length > 0) {
+                    const childrenContainer = document.createElement('div');
+                    childrenContainer.className = 'tree-children';
+
+                    let hasChildren = false;
+                    def.upgrades.forEach(uId => {
+                        const child = createTreeNode(uId);
+                        if (child) {
+                            childrenContainer.appendChild(child);
+                            hasChildren = true;
+                        }
+                    });
+
+                    if (hasChildren) branch.appendChild(childrenContainer);
+                }
+
+                return branch;
+            }
+
+            // Start from 'basic'
+            const root = createTreeNode('basic');
+            if (root) container.appendChild(root);
+        }
+
+        initShapes(); initBots(); updateUpgradeUI(); updateUI(); gameLoop();
+    </script>
+</body>
+
 </html>
