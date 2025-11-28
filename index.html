@@ -396,7 +396,7 @@
             </div>
 
             <!-- Pong -->
-            <div class="card" data-title="Pong" onclick="escolherPong();">
+            <div class="card" data-title="Pong" onclick="location.href='./html/pong.html'">
                 <div class="thumb">
                     <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <rect x="8" y="20" width="6" height="24" rx="2" fill="#7cff7c" />
@@ -627,15 +627,6 @@
     </div>
 
     <script>
-        // keep existing pong chooser but localized and slightly improved
-        function escolherPong() {
-            const modo = prompt("Choisissez le mode:\n1 = Contre IA\n2 = Deux joueurs");
-            if (modo === "1") {
-                window.location.href = "html/pong.html?modo=ai";
-            } else if (modo === "2") {
-                window.location.href = "html/pong.html?modo=2p";
-            }
-        }
 
         // Slither chooser
         function escolherSlither() {

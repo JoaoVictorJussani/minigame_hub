@@ -102,8 +102,8 @@
 
         #board {
             display: grid;
-            grid-template-columns: repeat(12, 40px);
-            grid-template-rows: repeat(10, 40px);
+            grid-template-columns: repeat(16, 40px);
+            grid-template-rows: repeat(12, 40px);
             gap: 4px;
             background: rgba(0, 0, 0, 0.2);
             padding: 10px;
@@ -204,11 +204,13 @@
 </head>
 
 <body>
-
     <div class="game-container">
         <div id="board"></div>
-
         <div class="sidebar">
+            <div class="stat-card">
+                <div class="stat-label">LEVEL</div>
+                <div class="stat-val" id="levelVal">1</div>
+            </div>
             <div class="stat-card">
                 <div class="stat-label">WAVE</div>
                 <div class="stat-val" id="waveVal">1</div>
@@ -221,7 +223,6 @@
                 <div class="stat-label">LIVES</div>
                 <div class="stat-val" id="livesVal">20</div>
             </div>
-
             <div class="tower-select">
                 <div class="tower-opt selected" onclick="selectTower('basic', 50, this)">
                     <div class="tower-icon" style="background:#19f0ff">B</div>
@@ -245,39 +246,109 @@
                     </div>
                 </div>
             </div>
-
             <button class="btn" onclick="nextWave()" id="waveBtn">START WAVE</button>
             <button class="btn" style="background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff"
                 onclick="location.href='../index.html'">EXIT</button>
         </div>
     </div>
-
     <div class="overlay" id="endScreen">
         <h1 id="endTitle" style="color:#fff;font-size:3rem">GAME OVER</h1>
         <button class="btn" onclick="location.reload()">RETRY</button>
     </div>
-
     <script>
-        const W = 12, H = 10;
+        const W = 16, H = 12;
         const boardEl = document.getElementById('board');
-
         // Game State
         let money = 100;
         let lives = 20;
         let wave = 0;
+        let level = 1;
+        const MAX_LEVEL = 50;
+        const WAVES_PER_LEVEL = 50;
+
         let selectedTower = 'basic';
         let selectedCost = 50;
         let isWaveRunning = false;
-
         // Entities
         let grid = []; // 2D array
         let path = [];
         let towers = [];
         let enemies = [];
         let bullets = [];
-
         // Init Grid
         function init() {
+            // Reset State for new level
+            money = 100 + (level - 1) * 50; // Bonus money for higher levels
+            lives = 20;
+            wave = 0;
+            towers = [];
+            enemies = [];
+            bullets = [];
+            isWaveRunning = false;
+
+            document.getElementById('waveBtn').disabled = false;
+            document.getElementById('waveBtn').style.opacity = 1;
+            generateLevel();
+            drawBoard();
+            updateUI();
+
+            // If it's the first init, start loop
+            if (!window.gameLoopStarted) {
+                window.gameLoopStarted = true;
+                requestAnimationFrame(loop);
+            }
+        }
+        function generateLevel() {
+            // Procedural Path Generation - Long Winding Paths
+            path = [];
+            let startY = Math.floor(Math.random() * H);
+
+            let curr = { x: 0, y: startY };
+            path.push([curr.x, curr.y]);
+
+            let attempts = 0;
+            const MAX_ATTEMPTS = 1000;
+            while (curr.x < W - 1 && attempts < MAX_ATTEMPTS) {
+                attempts++;
+                let moves = [];
+
+                const candidates = [
+                    { x: curr.x, y: curr.y - 1, weight: 5 }, // Up
+                    { x: curr.x, y: curr.y + 1, weight: 5 }, // Down
+                    { x: curr.x + 1, y: curr.y, weight: 1 }  // Right
+                ];
+                for (let c of candidates) {
+                    if (c.x >= 0 && c.x < W && c.y >= 0 && c.y < H) {
+                        if (!path.some(p => p[0] === c.x && p[1] === c.y)) {
+                            moves.push(c);
+                        }
+                    }
+                }
+                if (moves.length === 0) {
+                    return generateLevel();
+                }
+                let totalWeight = moves.reduce((sum, m) => sum + m.weight, 0);
+                let rand = Math.random() * totalWeight;
+                let choice = moves[0];
+                for (let m of moves) {
+                    rand -= m.weight;
+                    if (rand <= 0) {
+                        choice = m;
+                        break;
+                    }
+                }
+                curr = { x: choice.x, y: choice.y };
+                path.push([curr.x, curr.y]);
+            }
+
+            if (path[path.length - 1][0] < W - 1) {
+                return generateLevel();
+            }
+            if (path.length < 40) {
+                return generateLevel();
+            }
+        }
+        function drawBoard() {
             boardEl.innerHTML = '';
             grid = [];
             for (let y = 0; y < H; y++) {
@@ -293,82 +364,78 @@
                 }
                 grid.push(row);
             }
-
-            // Define Path (Snake)
-            path = [
-                [0, 1], [1, 1], [2, 1], [3, 1], [3, 2], [3, 3], [2, 3], [1, 3], [1, 4], [1, 5], [1, 6], [2, 6], [3, 6], [4, 6], [5, 6], [6, 6],
-                [6, 5], [6, 4], [6, 3], [7, 3], [8, 3], [9, 3], [9, 4], [9, 5], [9, 6], [9, 7], [9, 8], [10, 8], [11, 8]
-            ];
-
             path.forEach(([x, y]) => {
-                grid[y][x].type = 'path';
-                grid[y][x].el.classList.add('path');
+                if (grid[y] && grid[y][x]) {
+                    grid[y][x].type = 'path';
+                    grid[y][x].el.classList.add('path');
+                }
             });
-
-            updateUI();
-            requestAnimationFrame(loop);
         }
-
         function selectTower(type, cost, el) {
             selectedTower = type;
             selectedCost = cost;
             document.querySelectorAll('.tower-opt').forEach(e => e.classList.remove('selected'));
             el.classList.add('selected');
         }
-
         function clickCell(x, y) {
             if (grid[y][x].type === 'path') return;
-            if (grid[y][x].type === 'tower') return; // Upgrade logic could go here
-
+            if (grid[y][x].type === 'tower') return;
             if (money >= selectedCost) {
                 money -= selectedCost;
                 buildTower(x, y, selectedTower);
                 updateUI();
             }
         }
-
         function buildTower(x, y, type) {
             grid[y][x].type = 'tower';
             const el = document.createElement('div');
             el.className = 'tower';
-
             let color = '#19f0ff';
             let range = 3;
             let dmg = 10;
             let cd = 60;
-
             if (type === 'sniper') { color = '#ff4fcc'; range = 6; dmg = 50; cd = 120; }
             if (type === 'rapid') { color = '#ffd700'; range = 2.5; dmg = 5; cd = 15; }
-
             el.style.background = color;
             el.textContent = type[0].toUpperCase();
-
             grid[y][x].el.appendChild(el);
-
             towers.push({
                 x, y, type, range, dmg, maxCd: cd, cd: 0, el
             });
         }
-
         function nextWave() {
             if (isWaveRunning) return;
+
+            if (wave >= WAVES_PER_LEVEL) {
+                nextLevel();
+                return;
+            }
             isWaveRunning = true;
             wave++;
             document.getElementById('waveBtn').disabled = true;
             document.getElementById('waveBtn').style.opacity = 0.5;
-
-            let count = 5 + wave * 2;
-            let hp = 20 + wave * 15;
-            let speed = 0.03 + (wave * 0.005);
-
+            let levelFactor = 1 + (level * 0.2);
+            let count = 5 + Math.floor(wave * 0.5);
+            let hp = (20 + wave * 15) * levelFactor;
+            let speed = 0.03 + (wave * 0.002) + (level * 0.005);
             let spawned = 0;
             let interval = setInterval(() => {
                 spawnEnemy(hp, speed);
                 spawned++;
                 if (spawned >= count) clearInterval(interval);
-            }, 1000);
+            }, 1000 - (level * 10));
         }
 
+        function nextLevel() {
+            if (level >= MAX_LEVEL) {
+                alert("YOU WIN! ALL 50 LEVELS COMPLETED!");
+                location.reload();
+                return;
+            }
+            level++;
+            alert(`LEVEL ${level - 1} COMPLETE! STARTING LEVEL ${level}`);
+            init();
+        }
         function spawnEnemy(hp, speed) {
             const el = document.createElement('div');
             el.className = 'enemy';
@@ -381,23 +448,27 @@
                 el
             });
         }
-
         function updateUI() {
-            document.getElementById('moneyVal').textContent = '$' + money;
+            document.getElementById('moneyVal').textContent = '$' + Math.floor(money);
             document.getElementById('livesVal').textContent = lives;
-            document.getElementById('waveVal').textContent = wave;
-        }
+            document.getElementById('waveVal').textContent = `${wave} / ${WAVES_PER_LEVEL}`;
+            document.getElementById('levelVal').textContent = level;
 
+            const btn = document.getElementById('waveBtn');
+            if (wave >= WAVES_PER_LEVEL && !isWaveRunning) {
+                btn.textContent = "NEXT LEVEL";
+            } else {
+                btn.textContent = "START WAVE";
+            }
+        }
         function loop() {
-            // Update Enemies
             for (let i = enemies.length - 1; i >= 0; i--) {
                 let e = enemies[i];
                 e.progress += e.speed;
                 if (e.progress >= 1.0) {
                     e.progress = 0;
                     e.pathIdx++;
-                    if (e.pathIdx >= path.length) {
-                        // Reached end
+                    if (e.pathIdx >= path.length - 1) {
                         lives--;
                         e.el.remove();
                         enemies.splice(i, 1);
@@ -406,50 +477,34 @@
                         continue;
                     }
                 }
-
-                // Move visual
                 const [cx, cy] = path[e.pathIdx];
                 const [nx, ny] = path[e.pathIdx + 1] || path[e.pathIdx];
-
                 const lerpX = cx + (nx - cx) * e.progress;
                 const lerpY = cy + (ny - cy) * e.progress;
-
                 e.x = lerpX;
                 e.y = lerpY;
-
-                e.el.style.transform = `translate(${lerpX * 44}px, ${lerpY * 44}px)`; // 40px cell + 4 gap
+                e.el.style.transform = `translate(${lerpX * 44}px, ${lerpY * 44}px)`;
             }
-
-            // Towers Shoot
             towers.forEach(t => {
                 if (t.cd > 0) t.cd--;
                 else {
-                    // Find target
                     const target = enemies.find(e => {
                         const dist = Math.hypot(e.x - t.x, e.y - t.y);
                         return dist <= t.range;
                     });
-
                     if (target) {
                         t.cd = t.maxCd;
-                        // Shoot visual
                         const b = document.createElement('div');
                         b.className = 'bullet';
-                        // +30 = 10px padding + 20px center
                         b.style.left = (t.x * 44 + 30) + 'px';
                         b.style.top = (t.y * 44 + 30) + 'px';
                         boardEl.appendChild(b);
-
-                        // Animate bullet to target
                         const tx = target.x * 44 + 30;
                         const ty = target.y * 44 + 30;
-
                         b.animate([
                             { transform: 'translate(0,0)' },
                             { transform: `translate(${tx - (t.x * 44 + 30)}px, ${ty - (t.y * 44 + 30)}px)` }
                         ], { duration: 200 }).onfinish = () => b.remove();
-
-                        // Damage
                         target.hp -= t.dmg;
                         if (target.hp <= 0) {
                             money += 15;
@@ -461,23 +516,18 @@
                     }
                 }
             });
-
-            // Check Wave End
             if (isWaveRunning && enemies.length === 0) {
                 document.getElementById('waveBtn').disabled = false;
                 document.getElementById('waveBtn').style.opacity = 1;
                 isWaveRunning = false;
+                updateUI();
             }
-
             requestAnimationFrame(loop);
         }
-
         function gameOver() {
             document.getElementById('endScreen').classList.add('active');
         }
-
         init();
-
     </script>
 </body>
 
